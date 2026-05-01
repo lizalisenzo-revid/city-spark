@@ -352,7 +352,7 @@ function ExpandedDay({ dateKey, events, dragOverHour, setDragOverHour, onMoveEve
             )}
             style={{ height: HOUR_PX }}
             onDragOver={(e) => { e.preventDefault(); setDragOverHour(h); }}
-            onDragLeave={() => setDragOverHour((cur) => cur === h ? null : cur)}
+            onDragLeave={() => { if (dragOverHour === h) setDragOverHour(null); }}
             onDrop={(e) => {
               e.preventDefault();
               const id = e.dataTransfer.getData("text/event-id");
