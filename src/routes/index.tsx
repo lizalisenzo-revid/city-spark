@@ -23,7 +23,7 @@ type View = "discover" | "plan" | "favs";
 
 function HomePage() {
   const [city, setCity] = useState<City>("Centurion");
-  const [time, setTime] = useState<TimeOfDay>("day");
+  const [time, setTime] = useState<TimeOfDay | "all">("all");
   const [vibe, setVibe] = useState<Vibe | "all">("all");
   const [cat, setCat] = useState<Category | "all">("all");
   const [view, setView] = useState<View>("discover");
