@@ -2,9 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { CITIES, CATEGORIES, VIBES, EVENTS, type City, type TimeOfDay, type Vibe, type Category, type CityEvent } from "@/data/events";
 import { PosterCard } from "@/components/PosterCard";
+import { ScrapbookView } from "@/components/ScrapbookView";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useAuth } from "@/hooks/useAuth";
-import { Sun, Moon, Sparkles, Heart, Calendar, ChevronDown, LogIn, User as UserIcon } from "lucide-react";
+import { Sun, Moon, Sparkles, Heart, Calendar, ChevronDown, LogIn, User as UserIcon, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
