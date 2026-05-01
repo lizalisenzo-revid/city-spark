@@ -105,15 +105,6 @@
 @utility tape {
   position: relative;
 }
-@utility tape::before {
-  content: "";
-  position: absolute;
-  top: -10px; left: 50%;
-  width: 70px; height: 22px;
-  transform: translateX(-50%) rotate(-4deg);
-  background: oklch(0.92 0.17 100 / 0.75);
-  box-shadow: 0 2px 6px oklch(0 0 0 / 0.1);
-}
 
 @utility shadow-poster {
   box-shadow:
