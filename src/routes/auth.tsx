@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Sparkles, Mail, Lock, ArrowRight } from "lucide-react";
+import { Sparkles, Mail, Lock, ArrowRight, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/auth")({
@@ -17,10 +17,12 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+type Mode = "signin" | "signup" | "reset" | "reset-sent";
+
 function AuthPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -35,7 +37,7 @@ function AuthPage() {
     setBusy(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -44,12 +46,34 @@ function AuthPage() {
           },
         });
         if (error) throw error;
-        toast.success("Welcome! You're signed in.");
+        // If session exists, email confirmation is disabled — user is logged in immediately
+        if (data.session) {
+          toast.success("Welcome! You're signed in.");
+        } else {
+          toast.success("Almost there! Check your email to confirm your account.");
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("Welcome back.");
       }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Something went wrong";
+      toast.error(msg);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+      if (error) throw error;
+      setMode("reset-sent");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong";
       toast.error(msg);
@@ -78,78 +102,143 @@ function AuthPage() {
         </Link>
 
         <div className="bg-cream border-2 border-ink shadow-poster rounded-2xl p-7">
-          <h1 className="font-display text-4xl mb-1">
-            {mode === "signin" ? "Welcome back" : "Make it yours"}
-          </h1>
-          <p className="text-ink/70 mb-6 text-sm">
-            {mode === "signin"
-              ? "Sign in to your personal day planner."
-              : "Create an account to save events and plan your week."}
-          </p>
 
-          <button
-            onClick={handleGoogle}
-            disabled={busy}
-            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-paper border-2 border-ink rounded-full font-bold text-sm shadow-[2px_2px_0_0_var(--ink)] hover:translate-y-0.5 transition-transform disabled:opacity-50"
-          >
-            <GoogleIcon /> Continue with Google
-          </button>
+          {/* ── Reset sent confirmation ── */}
+          {mode === "reset-sent" ? (
+            <div className="text-center py-4">
+              <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-mint" strokeWidth={2} />
+              <h1 className="font-display text-4xl mb-2">Check your inbox</h1>
+              <p className="text-ink/70 text-sm mb-6">
+                We've sent a password reset link to <strong>{email}</strong>. Click the link in the email to set a new password.
+              </p>
+              <button
+                onClick={() => { setMode("signin"); setEmail(""); }}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-ink text-paper font-bold border-2 border-ink rounded-full shadow-[3px_3px_0_0_var(--coral)] hover:translate-y-0.5 transition-transform"
+              >
+                <ArrowLeft className="h-4 w-4" /> Back to sign in
+              </button>
+            </div>
 
-          <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-widest text-ink/50">
-            <span className="h-px flex-1 bg-ink/20" /> or email <span className="h-px flex-1 bg-ink/20" />
-          </div>
+          /* ── Forgot password form ── */
+          ) : mode === "reset" ? (
+            <>
+              <button
+                onClick={() => setMode("signin")}
+                className="inline-flex items-center gap-1.5 text-sm font-bold text-ink/60 hover:text-ink mb-4"
+              >
+                <ArrowLeft className="h-4 w-4" /> Back
+              </button>
+              <h1 className="font-display text-4xl mb-1">Reset password</h1>
+              <p className="text-ink/70 mb-6 text-sm">
+                Enter your email and we'll send you a link to set a new password.
+              </p>
+              <form onSubmit={handleReset} className="space-y-3">
+                <Field icon={<Mail className="h-4 w-4" />}>
+                  <input
+                    type="email"
+                    required
+                    className="w-full bg-transparent outline-none text-sm"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </Field>
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-coral text-paper border-2 border-ink rounded-full font-bold text-sm shadow-[3px_3px_0_0_var(--ink)] hover:translate-y-0.5 transition-transform disabled:opacity-50"
+                >
+                  Send reset link <ArrowRight className="h-4 w-4" />
+                </button>
+              </form>
+            </>
 
-          <form onSubmit={handleEmail} className="space-y-3">
-            {mode === "signup" && (
-              <Field icon={<Sparkles className="h-4 w-4" />}>
-                <input
-                  className="w-full bg-transparent outline-none text-sm"
-                  placeholder="Your name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-              </Field>
-            )}
-            <Field icon={<Mail className="h-4 w-4" />}>
-              <input
-                type="email"
-                required
-                className="w-full bg-transparent outline-none text-sm"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </Field>
-            <Field icon={<Lock className="h-4 w-4" />}>
-              <input
-                type="password"
-                required
-                minLength={6}
-                className="w-full bg-transparent outline-none text-sm"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </Field>
+          /* ── Sign in / Sign up ── */
+          ) : (
+            <>
+              <h1 className="font-display text-4xl mb-1">
+                {mode === "signin" ? "Welcome back" : "Make it yours"}
+              </h1>
+              <p className="text-ink/70 mb-6 text-sm">
+                {mode === "signin"
+                  ? "Sign in to your personal day planner."
+                  : "Create an account to save events and plan your week."}
+              </p>
 
-            <button
-              type="submit"
-              disabled={busy}
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-coral text-paper border-2 border-ink rounded-full font-bold text-sm shadow-[3px_3px_0_0_var(--ink)] hover:translate-y-0.5 transition-transform disabled:opacity-50"
-            >
-              {mode === "signin" ? "Sign in" : "Create account"} <ArrowRight className="h-4 w-4" />
-            </button>
-          </form>
+              <button
+                onClick={handleGoogle}
+                disabled={busy}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-paper border-2 border-ink rounded-full font-bold text-sm shadow-[2px_2px_0_0_var(--ink)] hover:translate-y-0.5 transition-transform disabled:opacity-50"
+              >
+                <GoogleIcon /> Continue with Google
+              </button>
 
-          <p className="text-center text-sm text-ink/70 mt-5">
-            {mode === "signin" ? "New here?" : "Already have an account?"}{" "}
-            <button
-              onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-              className="font-bold underline underline-offset-2 hover:text-coral"
-            >
-              {mode === "signin" ? "Create an account" : "Sign in"}
-            </button>
-          </p>
+              <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-widest text-ink/50">
+                <span className="h-px flex-1 bg-ink/20" /> or email <span className="h-px flex-1 bg-ink/20" />
+              </div>
+
+              <form onSubmit={handleEmail} className="space-y-3">
+                {mode === "signup" && (
+                  <Field icon={<Sparkles className="h-4 w-4" />}>
+                    <input
+                      className="w-full bg-transparent outline-none text-sm"
+                      placeholder="Your name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                    />
+                  </Field>
+                )}
+                <Field icon={<Mail className="h-4 w-4" />}>
+                  <input
+                    type="email"
+                    required
+                    className="w-full bg-transparent outline-none text-sm"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </Field>
+                <Field icon={<Lock className="h-4 w-4" />}>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    className="w-full bg-transparent outline-none text-sm"
+                    placeholder="Password (min 6 characters)"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </Field>
+
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-coral text-paper border-2 border-ink rounded-full font-bold text-sm shadow-[3px_3px_0_0_var(--ink)] hover:translate-y-0.5 transition-transform disabled:opacity-50"
+                >
+                  {mode === "signin" ? "Sign in" : "Create account"} <ArrowRight className="h-4 w-4" />
+                </button>
+              </form>
+
+              {mode === "signin" && (
+                <button
+                  onClick={() => setMode("reset")}
+                  className="block w-full text-center text-sm text-ink/60 hover:text-coral mt-3 font-bold"
+                >
+                  Forgot your password?
+                </button>
+              )}
+
+              <p className="text-center text-sm text-ink/70 mt-4">
+                {mode === "signin" ? "New here?" : "Already have an account?"}{" "}
+                <button
+                  onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+                  className="font-bold underline underline-offset-2 hover:text-coral"
+                >
+                  {mode === "signin" ? "Create an account" : "Sign in"}
+                </button>
+              </p>
+            </>
+          )}
         </div>
       </div>
     </div>

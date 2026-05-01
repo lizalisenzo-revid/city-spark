@@ -6,7 +6,7 @@ import { AddToCalendarDialog, type EditingEvent } from "@/components/AddToCalend
 import { toast } from "sonner";
 import {
   CalendarPlus, ChevronLeft, ChevronRight, Trash2, Sparkles,
-  LogOut, Home, Calendar as CalIcon, Pencil, GripVertical, ChevronDown,
+  LogOut, Home, Calendar as CalIcon, Pencil, GripVertical, ChevronDown, Archive, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EVENTS } from "@/data/events";
@@ -38,13 +38,10 @@ const COLOR_BG: Record<string, string> = {
   mint: "bg-mint", sky: "bg-sky", lilac: "bg-lilac", magenta: "bg-magenta",
 };
 const STICKY_TILT = ["-rotate-1", "rotate-1", "-rotate-2", "rotate-2", "rotate-0"];
-
-// Daytime / nighttime split (used for the expanded day view)
-const NIGHT_HOUR = 17; // events at or after 5pm = night
+const NIGHT_HOUR = 17;
 const DEFAULT_DAY_TIME = "10:00:00";
 const DEFAULT_NIGHT_TIME = "19:00:00";
 
-// Lookup poster image by seed event id
 const POSTER_BY_ID: Record<string, string> = Object.fromEntries(
   EVENTS.map((e) => [e.id, e.poster])
 );
@@ -59,6 +56,9 @@ function CalendarPage() {
   const [dialogDate, setDialogDate] = useState<string | undefined>();
   const [editingEvent, setEditingEvent] = useState<EditingEvent | null>(null);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
+  const [showArchive, setShowArchive] = useState(false);
+  const [archiveEvents, setArchiveEvents] = useState<ScheduledEvent[]>([]);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth" });
@@ -69,7 +69,6 @@ function CalendarPage() {
       const d = ymd(anchor);
       return { start: d, end: d };
     }
-    // 5-day window starting from anchor (anchor is clamped to today-or-later)
     const start = new Date(anchor); start.setHours(0,0,0,0);
     const end = new Date(start); end.setDate(start.getDate() + 4);
     return { start: ymd(start), end: ymd(end) };
@@ -87,16 +86,37 @@ function CalendarPage() {
     setEvents((data ?? []) as ScheduledEvent[]);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user, range.start, range.end]);
+  const loadArchive = async () => {
+    if (!user) return;
+    const today = ymd(new Date());
+    const { data, error } = await supabase
+      .from("scheduled_events")
+      .select("*")
+      .lt("scheduled_date", today)
+      .order("scheduled_date", { ascending: false })
+      .order("start_time", { ascending: false })
+      .limit(50);
+    if (error) { toast.error(error.message); return; }
+    setArchiveEvents((data ?? []) as ScheduledEvent[]);
+  };
 
-  const handleDelete = async (id: string) => {
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user, range.start, range.end]);
+  useEffect(() => { if (showArchive) loadArchive(); /* eslint-disable-next-line */ }, [showArchive, user]);
+
+  // Delete with confirmation
+  const requestDelete = (id: string) => setDeleteConfirm(id);
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
+    const id = deleteConfirm;
+    setDeleteConfirm(null);
     const { error } = await supabase.from("scheduled_events").delete().eq("id", id);
     if (error) return toast.error(error.message);
     setEvents((e) => e.filter((x) => x.id !== id));
+    setArchiveEvents((e) => e.filter((x) => x.id !== id));
     toast.success("Removed");
   };
 
-  // Move an event to a new (date, time) — optimistic update
   const moveEvent = async (id: string, newDate: string, newTime: string) => {
     const prev = events;
     setEvents((es) => es.map((e) => e.id === id ? { ...e, scheduled_date: newDate, start_time: newTime } : e));
@@ -113,10 +133,34 @@ function CalendarPage() {
 
   const days = view === "day" ? [new Date(anchor)] : nDays(anchor, 5);
   const todayKey = ymd(new Date());
-  const canGoBack = view === "day" ? ymd(anchor) > todayKey : ymd(anchor) > todayKey;
+  const canGoBack = ymd(anchor) > todayKey;
 
   return (
     <div className="min-h-screen bg-paper text-ink">
+      {/* ── Delete confirm modal ── */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-ink/50 backdrop-blur-sm px-4" onClick={() => setDeleteConfirm(null)}>
+          <div className="w-full max-w-sm bg-cream border-2 border-ink shadow-poster rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-display text-2xl mb-2">Remove this plan?</h3>
+            <p className="text-sm text-ink/70 mb-5">This can't be undone.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="flex-1 py-2 border-2 border-ink rounded-full font-bold text-sm hover:bg-lemon"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="flex-1 py-2 bg-coral text-paper border-2 border-ink rounded-full font-bold text-sm shadow-[2px_2px_0_0_var(--ink)] hover:translate-y-0.5 transition-transform"
+              >
+                Yes, remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="sticky top-0 z-30 border-b-2 border-ink bg-paper/90 backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
           <Link to="/" className="flex items-center gap-2 font-display text-2xl">
@@ -128,6 +172,15 @@ function CalendarPage() {
               <Home className="h-4 w-4" /> <span className="hidden sm:inline">Discover</span>
             </Link>
             <button
+              onClick={() => { setShowArchive(!showArchive); }}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-3 py-2 text-sm font-bold border-2 border-ink rounded-full transition-colors",
+                showArchive ? "bg-ink text-paper" : "bg-cream hover:bg-lemon"
+              )}
+            >
+              <Archive className="h-4 w-4" /> <span className="hidden sm:inline">Archive</span>
+            </button>
+            <button
               onClick={async () => { await signOut(); navigate({ to: "/" }); }}
               className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-bold border-2 border-ink rounded-full bg-cream hover:bg-coral hover:text-paper"
             >
@@ -138,88 +191,142 @@ function CalendarPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <section className="flex flex-wrap items-end justify-between gap-4 mb-6">
-          <div>
-            <span className="sticker"><Sparkles className="h-3.5 w-3.5" /> Your calendar</span>
-            <h1 className="font-display text-5xl sm:text-6xl mt-3">
-              Plan your <em className="text-coral not-italic">whole week</em>
-            </h1>
-            <p className="text-ink/70 mt-2">Tap a day to expand it. Drag sticky notes to shuffle your plans.</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex p-1 bg-cream border-2 border-ink rounded-full">
-              {(["day", "week"] as const).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => { setView(v); setExpandedDay(null); }}
-                  className={cn(
-                    "px-4 py-1.5 rounded-full font-bold text-sm capitalize",
-                    view === v ? "bg-ink text-paper" : "text-ink/60"
-                  )}
-                >{v}</button>
-              ))}
+
+        {/* ── ARCHIVE PANEL ── */}
+        {showArchive ? (
+          <section>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="font-display text-4xl sm:text-5xl">
+                  Past <em className="text-coral not-italic">plans</em>
+                </h1>
+                <p className="text-ink/70 mt-1">Everything you've done — your personal history.</p>
+              </div>
+              <button onClick={() => setShowArchive(false)} className="h-10 w-10 grid place-items-center border-2 border-ink rounded-full bg-cream hover:bg-lemon">
+                <X className="h-4 w-4" />
+              </button>
             </div>
-            <button
-              onClick={() => { setEditingEvent(null); setDialogDate(ymd(anchor)); setDialogOpen(true); }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-coral text-paper font-bold border-2 border-ink rounded-full shadow-[3px_3px_0_0_var(--ink)] hover:translate-y-0.5 transition-transform"
-            >
-              <CalendarPlus className="h-4 w-4" /> Add event
-            </button>
-          </div>
-        </section>
 
-        {/* Nav */}
-        <div className="flex items-center justify-between mb-5">
-          <button
-            onClick={() => shift(setAnchor, anchor, view, -1)}
-            disabled={!canGoBack}
-            className="h-10 w-10 grid place-items-center border-2 border-ink rounded-full bg-cream hover:bg-lemon disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-cream"
-            aria-label="Previous"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <h2 className="font-display text-2xl">{rangeLabel(view, anchor)}</h2>
-          <button onClick={() => shift(setAnchor, anchor, view, 1)} className="h-10 w-10 grid place-items-center border-2 border-ink rounded-full bg-cream hover:bg-lemon" aria-label="Next">
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
+            {archiveEvents.length === 0 ? (
+              <div className="border-2 border-dashed border-ink/30 rounded-2xl p-12 text-center">
+                <Archive className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                <p className="font-display text-2xl text-ink/60">No past plans yet</p>
+                <p className="text-ink/50 mt-1">Events from previous dates will appear here.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {archiveEvents.map((ev) => (
+                  <div key={ev.id} className="flex items-center gap-4 bg-cream border-2 border-ink rounded-xl px-4 py-3 shadow-[2px_2px_0_0_var(--ink)]">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold truncate">{ev.title}</p>
+                      <p className="text-xs text-ink/60">
+                        {new Date(ev.scheduled_date + "T00:00:00").toLocaleDateString("en-ZA", { weekday: "short", day: "numeric", month: "short", year: "numeric" })} · {fmtTime(ev.start_time)}
+                        {ev.location ? ` · ${ev.location}` : ""}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => requestDelete(ev.id)}
+                      className="h-8 w-8 grid place-items-center border-2 border-ink rounded-full bg-paper hover:bg-coral hover:text-paper shrink-0"
+                      aria-label="Delete"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
 
-        {/* Grid — items-start so each column has independent height */}
-        <div className={cn(
-          "grid gap-3 items-start",
-          view === "day" ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-5"
-        )}>
-          {days.map((d) => {
-            const key = ymd(d);
-            const dayEvents = events.filter((e) => e.scheduled_date === key);
-            const isToday = key === ymd(new Date());
-            const isExpanded = view === "day" || expandedDay === key;
+        ) : (
+          /* ── MAIN CALENDAR ── */
+          <>
+            <section className="flex flex-wrap items-end justify-between gap-4 mb-6">
+              <div>
+                <span className="sticker"><Sparkles className="h-3.5 w-3.5" /> Your calendar</span>
+                <h1 className="font-display text-5xl sm:text-6xl mt-3">
+                  Plan your <em className="text-coral not-italic">whole week</em>
+                </h1>
+                <p className="text-ink/70 mt-2">
+                  Tap a day to expand it.{" "}
+                  <span className="hidden sm:inline">Drag sticky notes to shuffle your plans · </span>
+                  Tap ✏️ to edit on mobile.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex p-1 bg-cream border-2 border-ink rounded-full">
+                  {(["day", "week"] as const).map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => { setView(v); setExpandedDay(null); }}
+                      className={cn(
+                        "px-4 py-1.5 rounded-full font-bold text-sm capitalize",
+                        view === v ? "bg-ink text-paper" : "text-ink/60"
+                      )}
+                    >{v}</button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => { setEditingEvent(null); setDialogDate(ymd(anchor)); setDialogOpen(true); }}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-coral text-paper font-bold border-2 border-ink rounded-full shadow-[3px_3px_0_0_var(--ink)] hover:translate-y-0.5 transition-transform"
+                >
+                  <CalendarPlus className="h-4 w-4" /> Add event
+                </button>
+              </div>
+            </section>
 
-            return (
-              <DayColumn
-                key={key}
-                dateKey={key}
-                date={d}
-                isToday={isToday}
-                isExpanded={isExpanded}
-                isWeekView={view === "week"}
-                onToggleExpand={() => setExpandedDay(expandedDay === key ? null : key)}
-                events={dayEvents}
-                onAdd={() => { setEditingEvent(null); setDialogDate(key); setDialogOpen(true); }}
-                onEdit={(ev) => { setEditingEvent(ev); setDialogOpen(true); }}
-                onDelete={handleDelete}
-                onMoveEvent={moveEvent}
-                allowExpandToggle={view === "week"}
-              />
-            );
-          })}
-        </div>
+            {/* Nav */}
+            <div className="flex items-center justify-between mb-5">
+              <button
+                onClick={() => shift(setAnchor, anchor, view, -1)}
+                disabled={!canGoBack}
+                className="h-10 w-10 grid place-items-center border-2 border-ink rounded-full bg-cream hover:bg-lemon disabled:opacity-30 disabled:cursor-not-allowed"
+                aria-label="Previous"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <h2 className="font-display text-2xl">{rangeLabel(view, anchor)}</h2>
+              <button onClick={() => shift(setAnchor, anchor, view, 1)} className="h-10 w-10 grid place-items-center border-2 border-ink rounded-full bg-cream hover:bg-lemon" aria-label="Next">
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
 
-        {events.length === 0 && (
-          <div className="mt-8 text-center text-ink/60">
-            <CalIcon className="h-10 w-10 mx-auto mb-3 opacity-50" />
-            <p>Your week is wide open. <Link to="/" className="font-bold underline hover:text-coral">Browse what's on</Link> and tap "Add to calendar" on anything you like.</p>
-          </div>
+            <div className={cn(
+              "grid gap-3 items-start",
+              view === "day" ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-5"
+            )}>
+              {days.map((d) => {
+                const key = ymd(d);
+                const dayEvents = events.filter((e) => e.scheduled_date === key);
+                const isToday = key === ymd(new Date());
+                const isExpanded = view === "day" || expandedDay === key;
+
+                return (
+                  <DayColumn
+                    key={key}
+                    dateKey={key}
+                    date={d}
+                    isToday={isToday}
+                    isExpanded={isExpanded}
+                    isWeekView={view === "week"}
+                    onToggleExpand={() => setExpandedDay(expandedDay === key ? null : key)}
+                    events={dayEvents}
+                    onAdd={() => { setEditingEvent(null); setDialogDate(key); setDialogOpen(true); }}
+                    onEdit={(ev) => { setEditingEvent(ev); setDialogOpen(true); }}
+                    onDelete={requestDelete}
+                    onMoveEvent={moveEvent}
+                    allowExpandToggle={view === "week"}
+                  />
+                );
+              })}
+            </div>
+
+            {events.length === 0 && (
+              <div className="mt-8 text-center text-ink/60">
+                <CalIcon className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                <p>Your week is wide open. <Link to="/" className="font-bold underline hover:text-coral">Browse what's on</Link> and tap "Add to calendar" on anything you like.</p>
+              </div>
+            )}
+          </>
         )}
       </main>
 
@@ -234,32 +341,17 @@ function CalendarPage() {
   );
 }
 
-/* ---------- Day column (collapsed list OR expanded time grid) ---------- */
-
+/* ── Day Column ── */
 interface DayColumnProps {
-  dateKey: string;
-  date: Date;
-  isToday: boolean;
-  isExpanded: boolean;
-  allowExpandToggle: boolean;
-  isWeekView: boolean;
-  onToggleExpand: () => void;
-  events: ScheduledEvent[];
-  onAdd: () => void;
-  onEdit: (ev: EditingEvent) => void;
-  onDelete: (id: string) => void;
-  onMoveEvent: (id: string, newDate: string, newTime: string) => void;
+  dateKey: string; date: Date; isToday: boolean; isExpanded: boolean;
+  allowExpandToggle: boolean; isWeekView: boolean; onToggleExpand: () => void;
+  events: ScheduledEvent[]; onAdd: () => void; onEdit: (ev: EditingEvent) => void;
+  onDelete: (id: string) => void; onMoveEvent: (id: string, newDate: string, newTime: string) => void;
 }
 
 function DayColumn(props: DayColumnProps) {
-  const {
-    dateKey, date, isToday, isExpanded, allowExpandToggle, isWeekView, onToggleExpand,
-    events, onAdd, onEdit, onDelete, onMoveEvent,
-  } = props;
+  const { dateKey, date, isToday, isExpanded, allowExpandToggle, isWeekView, onToggleExpand, events, onAdd, onEdit, onDelete, onMoveEvent } = props;
 
-  
-
-  // Drop on collapsed column → keep original time, just change date
   const handleColumnDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const id = e.dataTransfer.getData("text/event-id");
@@ -273,20 +365,15 @@ function DayColumn(props: DayColumnProps) {
         "bg-cream border-2 border-ink rounded-xl p-3 flex flex-col transition-all",
         isToday && "shadow-[3px_3px_0_0_var(--coral)]",
         isExpanded ? "min-h-[200px]" : "min-h-[180px]",
-        // In week view, an expanded day grows wider so thumbnails are legible
         isWeekView && isExpanded && "md:col-span-3"
       )}
       onDragOver={(e) => { if (!isExpanded) e.preventDefault(); }}
       onDrop={(e) => { if (!isExpanded) handleColumnDrop(e); }}
     >
-      {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <button
           onClick={allowExpandToggle ? onToggleExpand : undefined}
-          className={cn(
-            "flex items-center gap-2 text-left rounded-md px-1 -mx-1",
-            allowExpandToggle && "hover:bg-paper"
-          )}
+          className={cn("flex items-center gap-2 text-left rounded-md px-1 -mx-1", allowExpandToggle && "hover:bg-paper")}
         >
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-ink/60">
@@ -305,28 +392,14 @@ function DayColumn(props: DayColumnProps) {
         >+</button>
       </div>
 
-      {/* Body */}
       {isExpanded ? (
-        <ExpandedDay
-          dateKey={dateKey}
-          events={events}
-          onMoveEvent={onMoveEvent}
-          onEdit={onEdit}
-          onDelete={onDelete}
-        />
+        <ExpandedDay dateKey={dateKey} events={events} onMoveEvent={onMoveEvent} onEdit={onEdit} onDelete={onDelete} />
       ) : (
         <div className="flex-1 space-y-2">
           {events.length === 0 ? (
             <p className="text-xs text-ink/40 italic mt-2">Drop a sticky here ✨</p>
           ) : events.map((e, i) => (
-            <StickyNote
-              key={e.id}
-              ev={e}
-              tilt={STICKY_TILT[i % STICKY_TILT.length]}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              compact
-            />
+            <StickyNote key={e.id} ev={e} tilt={STICKY_TILT[i % STICKY_TILT.length]} onEdit={onEdit} onDelete={onDelete} compact />
           ))}
         </div>
       )}
@@ -334,82 +407,44 @@ function DayColumn(props: DayColumnProps) {
   );
 }
 
-/* ---------- Expanded day: Daytime / Nighttime zones ---------- */
-
-interface ExpandedDayProps {
-  dateKey: string;
-  events: ScheduledEvent[];
-  onMoveEvent: (id: string, newDate: string, newTime: string) => void;
-  onEdit: (ev: EditingEvent) => void;
-  onDelete: (id: string) => void;
-}
-
+/* ── Expanded Day ── */
 function isNight(time: string) {
   const h = Number(time.slice(0, 2));
   return h >= NIGHT_HOUR || h < 5;
 }
 
-function ExpandedDay({ dateKey, events, onMoveEvent, onEdit, onDelete }: ExpandedDayProps) {
-  const day = events.filter((e) => !isNight(e.start_time))
-    .sort((a, b) => a.start_time.localeCompare(b.start_time));
-  const night = events.filter((e) => isNight(e.start_time))
-    .sort((a, b) => a.start_time.localeCompare(b.start_time));
+function ExpandedDay({ dateKey, events, onMoveEvent, onEdit, onDelete }: {
+  dateKey: string; events: ScheduledEvent[];
+  onMoveEvent: (id: string, newDate: string, newTime: string) => void;
+  onEdit: (ev: EditingEvent) => void; onDelete: (id: string) => void;
+}) {
+  const day = events.filter((e) => !isNight(e.start_time)).sort((a, b) => a.start_time.localeCompare(b.start_time));
+  const night = events.filter((e) => isNight(e.start_time)).sort((a, b) => a.start_time.localeCompare(b.start_time));
 
   return (
     <div className="mt-2 grid gap-3">
-      <Zone
-        label="Daytime"
-        emoji="☀️"
-        accent="bg-lemon"
-        items={day}
-        dateKey={dateKey}
-        onMoveEvent={onMoveEvent}
-        onEdit={onEdit}
-        onDelete={onDelete}
-        defaultTime={DEFAULT_DAY_TIME}
-      />
-      <Zone
-        label="Nighttime"
-        emoji="🌙"
-        accent="bg-lilac"
-        items={night}
-        dateKey={dateKey}
-        onMoveEvent={onMoveEvent}
-        onEdit={onEdit}
-        onDelete={onDelete}
-        defaultTime={DEFAULT_NIGHT_TIME}
-      />
+      <Zone label="Daytime" emoji="☀️" accent="bg-lemon" items={day} dateKey={dateKey} onMoveEvent={onMoveEvent} onEdit={onEdit} onDelete={onDelete} defaultTime={DEFAULT_DAY_TIME} />
+      <Zone label="Nighttime" emoji="🌙" accent="bg-lilac" items={night} dateKey={dateKey} onMoveEvent={onMoveEvent} onEdit={onEdit} onDelete={onDelete} defaultTime={DEFAULT_NIGHT_TIME} />
     </div>
   );
 }
 
-interface ZoneProps {
-  label: string;
-  emoji: string;
-  accent: string;
-  items: ScheduledEvent[];
-  dateKey: string;
-  defaultTime: string;
+function Zone({ label, emoji, accent, items, dateKey, defaultTime, onMoveEvent, onEdit, onDelete }: {
+  label: string; emoji: string; accent: string; items: ScheduledEvent[];
+  dateKey: string; defaultTime: string;
   onMoveEvent: (id: string, newDate: string, newTime: string) => void;
-  onEdit: (ev: EditingEvent) => void;
-  onDelete: (id: string) => void;
-}
-
-function Zone({ label, emoji, accent, items, dateKey, defaultTime, onMoveEvent, onEdit, onDelete }: ZoneProps) {
+  onEdit: (ev: EditingEvent) => void; onDelete: (id: string) => void;
+}) {
   const [over, setOver] = useState(false);
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setOver(false);
+    e.preventDefault(); setOver(false);
     const id = e.dataTransfer.getData("text/event-id");
     const origTime = e.dataTransfer.getData("text/event-time");
     if (!id) return;
-    // If the event already belongs to this zone, keep its original time;
-    // otherwise snap it to the zone's default time.
     const targetIsNight = label === "Nighttime";
     const sameZone = origTime ? (isNight(origTime) === targetIsNight) : false;
-    const newTime = sameZone ? origTime : defaultTime;
-    onMoveEvent(id, dateKey, newTime);
+    onMoveEvent(id, dateKey, sameZone ? origTime : defaultTime);
   };
 
   return (
@@ -417,34 +452,19 @@ function Zone({ label, emoji, accent, items, dateKey, defaultTime, onMoveEvent, 
       onDragOver={(e) => { e.preventDefault(); setOver(true); }}
       onDragLeave={() => setOver(false)}
       onDrop={handleDrop}
-      className={cn(
-        "rounded-xl border-2 border-ink p-3 transition-colors",
-        over ? "bg-lemon/30" : "bg-paper/60"
-      )}
+      className={cn("rounded-xl border-2 border-ink p-3 transition-colors", over ? "bg-lemon/30" : "bg-paper/60")}
     >
       <div className="flex items-center gap-2 mb-2">
-        <span className={cn("inline-grid place-items-center h-7 w-7 border-2 border-ink rounded-full text-sm", accent)}>
-          {emoji}
-        </span>
+        <span className={cn("inline-grid place-items-center h-7 w-7 border-2 border-ink rounded-full text-sm", accent)}>{emoji}</span>
         <h3 className="font-display text-lg leading-none">{label}</h3>
-        <span className="text-[10px] font-bold uppercase tracking-widest text-ink/40 ml-auto">
-          {items.length} {items.length === 1 ? "plan" : "plans"}
-        </span>
+        <span className="text-[10px] font-bold uppercase tracking-widest text-ink/40 ml-auto">{items.length} {items.length === 1 ? "plan" : "plans"}</span>
       </div>
-
       {items.length === 0 ? (
         <p className="text-xs text-ink/40 italic py-3 text-center">Drop a sticky here ✨</p>
       ) : (
         <div className="grid gap-2">
           {items.map((e, i) => (
-            <StickyNote
-              key={e.id}
-              ev={e}
-              tilt={STICKY_TILT[i % STICKY_TILT.length]}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              size="large"
-            />
+            <StickyNote key={e.id} ev={e} tilt={STICKY_TILT[i % STICKY_TILT.length]} onEdit={onEdit} onDelete={onDelete} size="large" />
           ))}
         </div>
       )}
@@ -452,15 +472,11 @@ function Zone({ label, emoji, accent, items, dateKey, defaultTime, onMoveEvent, 
   );
 }
 
-/* ---------- Sticky note component ---------- */
-
+/* ── Sticky Note ── */
 interface StickyProps {
-  ev: ScheduledEvent;
-  tilt: string;
-  onEdit: (ev: EditingEvent) => void;
-  onDelete: (id: string) => void;
-  compact?: boolean;
-  size?: "small" | "large";
+  ev: ScheduledEvent; tilt: string;
+  onEdit: (ev: EditingEvent) => void; onDelete: (id: string) => void;
+  compact?: boolean; size?: "small" | "large";
 }
 
 function StickyNote({ ev, tilt, onEdit, onDelete, compact, size = "small" }: StickyProps) {
@@ -474,16 +490,15 @@ function StickyNote({ ev, tilt, onEdit, onDelete, compact, size = "small" }: Sti
     e.dataTransfer.effectAllowed = "move";
   };
 
-  // ----- LARGE: poster-forward sticky for expanded day view -----
   if (isLarge) {
     return (
       <div
         draggable
         onDragStart={handleDragStart}
+        title="Drag to move · tap ✏️ to edit"
         className={cn(
           "group relative border-2 border-ink rounded-xl overflow-hidden cursor-grab active:cursor-grabbing transition-transform hover:-translate-y-0.5",
-          "shadow-[4px_4px_0_0_var(--ink)]",
-          bg, tilt
+          "shadow-[4px_4px_0_0_var(--ink)]", bg, tilt
         )}
       >
         {poster ? (
@@ -502,46 +517,27 @@ function StickyNote({ ev, tilt, onEdit, onDelete, compact, size = "small" }: Sti
             {ev.location && <div className="text-[11px] text-ink/60 truncate">{ev.location}</div>}
           </div>
         )}
-
         <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
-          <button
-            onClick={(e) => { e.stopPropagation(); onEdit(ev as EditingEvent); }}
-            className="h-6 w-6 grid place-items-center bg-paper border border-ink rounded shadow-sm"
-            aria-label="Edit"
-          >
-            <Pencil className="h-3 w-3" />
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); onDelete(ev.id); }}
-            className="h-6 w-6 grid place-items-center bg-paper border border-ink rounded shadow-sm"
-            aria-label="Delete"
-          >
-            <Trash2 className="h-3 w-3" />
-          </button>
+          <button onClick={(e) => { e.stopPropagation(); onEdit(ev as EditingEvent); }} className="h-6 w-6 grid place-items-center bg-paper border border-ink rounded shadow-sm" aria-label="Edit"><Pencil className="h-3 w-3" /></button>
+          <button onClick={(e) => { e.stopPropagation(); onDelete(ev.id); }} className="h-6 w-6 grid place-items-center bg-paper border border-ink rounded shadow-sm" aria-label="Delete"><Trash2 className="h-3 w-3" /></button>
         </div>
       </div>
     );
   }
 
-  // ----- SMALL / COMPACT: thumbnail + title + time row (used in collapsed columns) -----
   return (
     <div
       draggable
       onDragStart={handleDragStart}
+      title="Drag to move · tap ✏️ to edit"
       className={cn(
         "group relative border-2 border-ink rounded-lg shadow-[2px_2px_0_0_var(--ink)] cursor-grab active:cursor-grabbing transition-transform hover:-translate-y-0.5",
-        bg, tilt,
-        compact ? "p-1.5 pr-7" : "p-2 pr-8"
+        bg, tilt, compact ? "p-1.5 pr-7" : "p-2 pr-8"
       )}
     >
       <div className="flex items-center gap-2">
         {poster ? (
-          <img
-            src={poster}
-            alt=""
-            className={cn("rounded object-cover border border-ink/40 shrink-0", compact ? "h-9 w-9" : "h-10 w-10")}
-            draggable={false}
-          />
+          <img src={poster} alt="" className={cn("rounded object-cover border border-ink/40 shrink-0", compact ? "h-9 w-9" : "h-10 w-10")} draggable={false} />
         ) : (
           <div className={cn("rounded border border-ink/40 bg-cream grid place-items-center shrink-0", compact ? "h-9 w-9" : "h-10 w-10")}>
             <GripVertical className="h-3 w-3 text-ink/40" />
@@ -552,29 +548,15 @@ function StickyNote({ ev, tilt, onEdit, onDelete, compact, size = "small" }: Sti
           <div className="text-[10px] text-ink/60 mt-0.5">{fmtTime(ev.start_time)}</div>
         </div>
       </div>
-
       <div className="absolute top-1 right-1 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
-        <button
-          onClick={(e) => { e.stopPropagation(); onEdit(ev as EditingEvent); }}
-          className="h-5 w-5 grid place-items-center bg-paper border border-ink rounded"
-          aria-label="Edit"
-        >
-          <Pencil className="h-2.5 w-2.5" />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); onDelete(ev.id); }}
-          className="h-5 w-5 grid place-items-center bg-paper border border-ink rounded"
-          aria-label="Delete"
-        >
-          <Trash2 className="h-2.5 w-2.5" />
-        </button>
+        <button onClick={(e) => { e.stopPropagation(); onEdit(ev as EditingEvent); }} className="h-5 w-5 grid place-items-center bg-paper border border-ink rounded" aria-label="Edit"><Pencil className="h-2.5 w-2.5" /></button>
+        <button onClick={(e) => { e.stopPropagation(); onDelete(ev.id); }} className="h-5 w-5 grid place-items-center bg-paper border border-ink rounded" aria-label="Delete"><Trash2 className="h-2.5 w-2.5" /></button>
       </div>
     </div>
   );
 }
 
-/* ---------- Date helpers ---------- */
-
+/* ── Date helpers ── */
 function ymd(d: Date) {
   const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
