@@ -129,7 +129,7 @@ function CalendarPage() {
               ))}
             </div>
             <button
-              onClick={() => { setDialogDate(ymd(anchor)); setDialogOpen(true); }}
+              onClick={() => { setEditingEvent(null); setDialogDate(ymd(anchor)); setDialogOpen(true); }}
               className="inline-flex items-center gap-2 px-4 py-2 bg-coral text-paper font-bold border-2 border-ink rounded-full shadow-[3px_3px_0_0_var(--ink)] hover:translate-y-0.5 transition-transform"
             >
               <CalendarPlus className="h-4 w-4" /> Add event
