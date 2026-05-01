@@ -39,10 +39,10 @@ const COLOR_BG: Record<string, string> = {
 };
 const STICKY_TILT = ["-rotate-1", "rotate-1", "-rotate-2", "rotate-2", "rotate-0"];
 
-const HOUR_START = 7;   // 7am
-const HOUR_END = 24;    // midnight (exclusive)
-const HOURS = Array.from({ length: HOUR_END - HOUR_START }, (_, i) => HOUR_START + i);
-const HOUR_PX = 96;     // height of one hour row in expanded view — roomy for big poster stickies
+// Daytime / nighttime split (used for the expanded day view)
+const NIGHT_HOUR = 17; // events at or after 5pm = night
+const DEFAULT_DAY_TIME = "10:00:00";
+const DEFAULT_NIGHT_TIME = "19:00:00";
 
 // Lookup poster image by seed event id
 const POSTER_BY_ID: Record<string, string> = Object.fromEntries(
@@ -257,7 +257,7 @@ function DayColumn(props: DayColumnProps) {
     events, onAdd, onEdit, onDelete, onMoveEvent,
   } = props;
 
-  const [dragOverHour, setDragOverHour] = useState<number | null>(null);
+  
 
   // Drop on collapsed column → keep original time, just change date
   const handleColumnDrop = (e: React.DragEvent) => {
@@ -310,8 +310,6 @@ function DayColumn(props: DayColumnProps) {
         <ExpandedDay
           dateKey={dateKey}
           events={events}
-          dragOverHour={dragOverHour}
-          setDragOverHour={setDragOverHour}
           onMoveEvent={onMoveEvent}
           onEdit={onEdit}
           onDelete={onDelete}
