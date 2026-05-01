@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { AddToCalendarDialog, type EditingEvent } from "@/components/AddToCalendarDialog";
@@ -601,9 +601,4 @@ function fmtTime(t: string) {
   const period = h >= 12 ? "pm" : "am";
   const hh = ((h + 11) % 12) + 1;
   return m === 0 ? `${hh}${period}` : `${hh}:${String(m).padStart(2,"0")}${period}`;
-}
-function fmtHour(h: number) {
-  const period = h >= 12 ? "pm" : "am";
-  const hh = ((h + 11) % 12) + 1;
-  return `${hh}${period}`;
 }
