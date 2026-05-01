@@ -180,7 +180,7 @@ function Header({ view, setView, favCount }: { view: View; setView: (v: View) =>
                 "inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm font-bold border-2 border-ink rounded-full transition-all duration-150 whitespace-nowrap shrink-0 will-change-transform",
                 view === t.id
                   ? "bg-ink text-paper shadow-[2px_2px_0_0_var(--coral)]"
-                  : "bg-cream hover:bg-lemon hover:scale-105 hover:shadow-[2px_2px_0_0_var(--coral)]"
+                  : "bg-cream hover:bg-lemon hover:border-coral hover:shadow-[2px_2px_0_0_var(--coral)]"
               )}
             >
               {t.icon}
@@ -190,7 +190,7 @@ function Header({ view, setView, favCount }: { view: View; setView: (v: View) =>
           <Link
             to={user ? "/calendar" : "/auth"}
             title={user ? "My Calendar" : "Sign in"}
-            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm font-bold border-2 border-ink rounded-full bg-coral text-paper shadow-[2px_2px_0_0_var(--ink)] hover:scale-105 hover:bg-coral/80 transition-all duration-150 shrink-0 will-change-transform"
+            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm font-bold border-2 border-ink rounded-full bg-coral text-paper shadow-[2px_2px_0_0_var(--ink)] hover:bg-coral/80 hover:shadow-[3px_3px_0_0_var(--ink)] transition-all duration-150 shrink-0"
           >
             {user ? <UserIcon className="h-4 w-4" /> : <LogIn className="h-4 w-4" />}
             <span className="hidden md:inline">{user ? "My Calendar" : "Sign in"}</span>
@@ -353,7 +353,7 @@ function Chip({ active, onClick, children, accent }: { active: boolean; onClick:
         "inline-flex items-center px-3.5 py-1.5 rounded-full text-sm font-bold border-2 border-ink transition-all",
         active
           ? (accent ? "bg-magenta text-paper shadow-[2px_2px_0_0_var(--ink)]" : "bg-ink text-paper shadow-[2px_2px_0_0_var(--coral)]")
-          : "bg-cream hover:bg-lemon hover:scale-105 hover:shadow-[2px_2px_0_0_var(--coral)]"
+          : "bg-cream hover:bg-lemon hover:border-coral hover:shadow-[2px_2px_0_0_var(--coral)]"
       )}
     >
       {children}
