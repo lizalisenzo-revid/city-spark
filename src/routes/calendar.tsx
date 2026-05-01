@@ -184,19 +184,28 @@ function CalendarPage() {
                     <div
                       key={e.id}
                       className={cn(
-                        "p-2 border-2 border-ink rounded-lg text-xs group relative",
+                        "p-2 pr-14 border-2 border-ink rounded-lg text-xs group relative",
                         e.color ? COLOR_BG[e.color] ?? "bg-paper" : "bg-paper"
                       )}
                     >
                       <div className="font-bold">{fmtTime(e.start_time)} · {e.title}</div>
                       {e.location && <div className="text-ink/70 mt-0.5">{e.location}</div>}
-                      <button
-                        onClick={() => handleDelete(e.id)}
-                        className="absolute top-1 right-1 h-6 w-6 grid place-items-center bg-paper border border-ink rounded opacity-0 group-hover:opacity-100"
-                        aria-label="Delete"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
+                      <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+                        <button
+                          onClick={() => { setEditingEvent(e); setDialogOpen(true); }}
+                          className="h-6 w-6 grid place-items-center bg-paper border border-ink rounded"
+                          aria-label="Edit"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(e.id)}
+                          className="h-6 w-6 grid place-items-center bg-paper border border-ink rounded"
+                          aria-label="Delete"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
