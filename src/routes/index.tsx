@@ -131,7 +131,8 @@ function Header({ view, setView, favCount }: { view: View; setView: (v: View) =>
   const tabs: { id: View; label: string; icon: React.ReactNode }[] = [
     { id: "discover", label: "Discover", icon: <Sparkles className="h-4 w-4" /> },
     { id: "plan", label: "Plan My Day", icon: <Calendar className="h-4 w-4" /> },
-    { id: "favs", label: `Saved${favCount ? ` · ${favCount}` : ""}`, icon: <Heart className="h-4 w-4" /> },
+    { id: "favs", label: `Memories${favCount ? ` · ${favCount}` : ""}`, icon: <Heart className="h-4 w-4" /> },
+    { id: "scrapbook", label: "Scrapbook", icon: <BookOpen className="h-4 w-4" /> },
   ];
   return (
     <header className="sticky top-0 z-40 border-b-2 border-ink bg-paper/90 backdrop-blur">
