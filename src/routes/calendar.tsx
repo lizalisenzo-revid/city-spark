@@ -194,6 +194,7 @@ function CalendarPage() {
                 date={d}
                 isToday={isToday}
                 isExpanded={isExpanded}
+                isWeekView={view === "week"}
                 onToggleExpand={() => setExpandedDay(expandedDay === key ? null : key)}
                 events={dayEvents}
                 onAdd={() => { setEditingEvent(null); setDialogDate(key); setDialogOpen(true); }}
