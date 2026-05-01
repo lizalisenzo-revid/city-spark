@@ -102,37 +102,40 @@
 }
 
 /* Reusable poster utilities */
-@utility tape {
-  position: relative;
-}
+@layer utilities {
+  .tape {
+    position: relative;
+  }
 
-@utility shadow-poster {
-  box-shadow:
-    8px 8px 0 0 var(--ink),
-    0 16px 40px -12px oklch(0.18 0.04 35 / 0.25);
-}
-@utility shadow-poster-sm {
-  box-shadow:
-    4px 4px 0 0 var(--ink),
-    0 8px 20px -8px oklch(0.18 0.04 35 / 0.2);
-}
+  .shadow-poster {
+    box-shadow:
+      8px 8px 0 0 var(--ink),
+      0 16px 40px -12px oklch(0.18 0.04 35 / 0.25);
+  }
 
-@utility halftone {
-  background-image: radial-gradient(oklch(0.18 0.04 35 / 0.25) 1px, transparent 1.4px);
-  background-size: 5px 5px;
-}
+  .shadow-poster-sm {
+    box-shadow:
+      4px 4px 0 0 var(--ink),
+      0 8px 20px -8px oklch(0.18 0.04 35 / 0.2);
+  }
 
-@utility sticker {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.3rem 0.7rem;
-  border: 2px solid var(--ink);
-  border-radius: 999px;
-  background: var(--cream);
-  font-weight: 700;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  box-shadow: 2px 2px 0 0 var(--ink);
+  .halftone {
+    background-image: radial-gradient(oklch(0.18 0.04 35 / 0.25) 1px, transparent 1.4px);
+    background-size: 5px 5px;
+  }
+
+  .sticker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.7rem;
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    background: var(--cream);
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    box-shadow: 2px 2px 0 0 var(--ink);
+  }
 }
