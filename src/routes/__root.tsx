@@ -67,6 +67,14 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+import { AuthProvider } from "@/hooks/useAuth";
+import { Toaster } from "sonner";
+
 function RootComponent() {
-  return <Outlet />;
+  return (
+    <AuthProvider>
+      <Outlet />
+      <Toaster position="top-center" richColors />
+    </AuthProvider>
+  );
 }

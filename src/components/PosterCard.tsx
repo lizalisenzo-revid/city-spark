@@ -1,6 +1,8 @@
 import { CityEvent } from "@/data/events";
-import { Heart, MapPin, Clock } from "lucide-react";
+import { Heart, MapPin, Clock, CalendarPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
+import { AddToCalendarDialog, buildPrefillFromEvent } from "@/components/AddToCalendarDialog";
 
 const accentBg: Record<CityEvent["accent"], string> = {
   coral: "bg-coral",
@@ -20,6 +22,7 @@ interface Props {
 }
 
 export function PosterCard({ event, favored, onToggleFav, size = "md" }: Props) {
+  const [addOpen, setAddOpen] = useState(false);
   const fmtTime = (h: number) => {
     const period = h >= 12 ? "pm" : "am";
     const hh = ((h + 11) % 12) + 1;
@@ -27,6 +30,7 @@ export function PosterCard({ event, favored, onToggleFav, size = "md" }: Props) 
   };
 
   return (
+    <>
     <article
       className={cn(
         "group relative flex flex-col bg-cream border-2 border-ink shadow-poster-sm transition-transform duration-300 hover:-translate-y-1 hover:rotate-0",
@@ -76,7 +80,19 @@ export function PosterCard({ event, favored, onToggleFav, size = "md" }: Props) 
           <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{fmtTime(event.startHour)}</span>
           <span className="ml-auto px-2 py-0.5 bg-ink text-paper rounded-sm">{event.price}</span>
         </div>
+        <button
+          onClick={(e) => { e.preventDefault(); setAddOpen(true); }}
+          className="mt-2 w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-paper border-2 border-ink rounded-full hover:bg-lemon transition-colors"
+        >
+          <CalendarPlus className="h-3.5 w-3.5" /> Add to calendar
+        </button>
       </div>
     </article>
+    <AddToCalendarDialog
+      open={addOpen}
+      onClose={() => setAddOpen(false)}
+      prefill={buildPrefillFromEvent(event)}
+    />
+    </>
   );
 }
