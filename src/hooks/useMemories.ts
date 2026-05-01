@@ -1,10 +1,21 @@
 import { useEffect, useState, useCallback } from "react";
 
 const KEY = "today-memories-v1";
+const COLLAGE_KEY = "today-collages-v1";
 
 export type Memory = {
   id: string;
   dataUrl: string;
+  createdAt: number;
+};
+
+export type SavedCollage = {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  eventArea: string;
+  dataUrl: string;
+  layout: string;
   createdAt: number;
 };
 
@@ -22,6 +33,20 @@ function read(): Store {
 
 function write(store: Store) {
   try { window.localStorage.setItem(KEY, JSON.stringify(store)); } catch { /* quota */ }
+}
+
+function readCollages(): SavedCollage[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(COLLAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeCollages(list: SavedCollage[]) {
+  try { window.localStorage.setItem(COLLAGE_KEY, JSON.stringify(list)); } catch { /* quota */ }
 }
 
 export function useMemories(eventId: string) {
@@ -70,6 +95,45 @@ export function useMemories(eventId: string) {
 
 export function getMemoryCount(eventId: string): number {
   return (read()[eventId] ?? []).length;
+}
+
+/** Hook for the scrapbook: all photos + all saved collages across every place. */
+export function useScrapbook() {
+  const [photos, setPhotos] = useState<(Memory & { eventId: string })[]>([]);
+  const [collages, setCollages] = useState<SavedCollage[]>([]);
+
+  const refresh = useCallback(() => {
+    const store = read();
+    const flat: (Memory & { eventId: string })[] = [];
+    for (const [eid, list] of Object.entries(store)) {
+      for (const m of list) flat.push({ ...m, eventId: eid });
+    }
+    flat.sort((a, b) => b.createdAt - a.createdAt);
+    setPhotos(flat);
+    setCollages(readCollages().sort((a, b) => b.createdAt - a.createdAt));
+  }, []);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  const removeCollage = useCallback((id: string) => {
+    const next = readCollages().filter((c) => c.id !== id);
+    writeCollages(next);
+    setCollages(next.sort((a, b) => b.createdAt - a.createdAt));
+  }, []);
+
+  return { photos, collages, refresh, removeCollage };
+}
+
+export function saveCollage(input: Omit<SavedCollage, "id" | "createdAt">): SavedCollage {
+  const all = readCollages();
+  const entry: SavedCollage = {
+    ...input,
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    createdAt: Date.now(),
+  };
+  all.push(entry);
+  writeCollages(all);
+  return entry;
 }
 
 async function fileToCompressedDataUrl(file: File, maxDim: number): Promise<string> {
