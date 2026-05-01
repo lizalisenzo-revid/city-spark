@@ -2,9 +2,9 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { AddToCalendarDialog } from "@/components/AddToCalendarDialog";
+import { AddToCalendarDialog, type EditingEvent } from "@/components/AddToCalendarDialog";
 import { toast } from "sonner";
-import { CalendarPlus, ChevronLeft, ChevronRight, Trash2, Sparkles, LogOut, Home, Calendar as CalIcon } from "lucide-react";
+import { CalendarPlus, ChevronLeft, ChevronRight, Trash2, Sparkles, LogOut, Home, Calendar as CalIcon, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/calendar")({
@@ -41,6 +41,7 @@ function CalendarPage() {
   const [events, setEvents] = useState<ScheduledEvent[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogDate, setDialogDate] = useState<string | undefined>();
+  const [editingEvent, setEditingEvent] = useState<EditingEvent | null>(null);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth" });
@@ -128,7 +129,7 @@ function CalendarPage() {
               ))}
             </div>
             <button
-              onClick={() => { setDialogDate(ymd(anchor)); setDialogOpen(true); }}
+              onClick={() => { setEditingEvent(null); setDialogDate(ymd(anchor)); setDialogOpen(true); }}
               className="inline-flex items-center gap-2 px-4 py-2 bg-coral text-paper font-bold border-2 border-ink rounded-full shadow-[3px_3px_0_0_var(--ink)] hover:translate-y-0.5 transition-transform"
             >
               <CalendarPlus className="h-4 w-4" /> Add event
@@ -171,7 +172,7 @@ function CalendarPage() {
                     </p>
                   </div>
                   <button
-                    onClick={() => { setDialogDate(key); setDialogOpen(true); }}
+                    onClick={() => { setEditingEvent(null); setDialogDate(key); setDialogOpen(true); }}
                     className="h-7 w-7 grid place-items-center border-2 border-ink rounded-full bg-paper hover:bg-lemon text-xs font-bold"
                     aria-label="Add event"
                   >+</button>
@@ -183,19 +184,28 @@ function CalendarPage() {
                     <div
                       key={e.id}
                       className={cn(
-                        "p-2 border-2 border-ink rounded-lg text-xs group relative",
+                        "p-2 pr-14 border-2 border-ink rounded-lg text-xs group relative",
                         e.color ? COLOR_BG[e.color] ?? "bg-paper" : "bg-paper"
                       )}
                     >
                       <div className="font-bold">{fmtTime(e.start_time)} · {e.title}</div>
                       {e.location && <div className="text-ink/70 mt-0.5">{e.location}</div>}
-                      <button
-                        onClick={() => handleDelete(e.id)}
-                        className="absolute top-1 right-1 h-6 w-6 grid place-items-center bg-paper border border-ink rounded opacity-0 group-hover:opacity-100"
-                        aria-label="Delete"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
+                      <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+                        <button
+                          onClick={() => { setEditingEvent(e); setDialogOpen(true); }}
+                          className="h-6 w-6 grid place-items-center bg-paper border border-ink rounded"
+                          aria-label="Edit"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(e.id)}
+                          className="h-6 w-6 grid place-items-center bg-paper border border-ink rounded"
+                          aria-label="Delete"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -214,8 +224,9 @@ function CalendarPage() {
 
       <AddToCalendarDialog
         open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
+        onClose={() => { setDialogOpen(false); setEditingEvent(null); }}
         defaultDate={dialogDate}
+        editing={editingEvent}
         onSaved={load}
       />
     </div>

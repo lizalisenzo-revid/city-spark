@@ -1,10 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
-import { CalendarPlus, X } from "lucide-react";
+import { CalendarPlus, X, Save } from "lucide-react";
 import type { CityEvent } from "@/data/events";
+
+export interface EditingEvent {
+  id: string;
+  title: string;
+  notes: string | null;
+  location: string | null;
+  scheduled_date: string;
+  start_time: string;
+  duration_minutes: number;
+  color: string | null;
+}
 
 interface Props {
   open: boolean;
@@ -20,22 +31,41 @@ interface Props {
   }>;
   onSaved?: () => void;
   defaultDate?: string; // YYYY-MM-DD
+  editing?: EditingEvent | null;
 }
 
-export function AddToCalendarDialog({ open, onClose, prefill, onSaved, defaultDate }: Props) {
+export function AddToCalendarDialog({ open, onClose, prefill, onSaved, defaultDate, editing }: Props) {
   const { user } = useAuth();
+  const isEdit = !!editing;
   const today = defaultDate ?? new Date().toISOString().slice(0, 10);
-  const [title, setTitle] = useState(prefill?.title ?? "");
-  const [notes, setNotes] = useState(prefill?.notes ?? "");
-  const [location, setLocation] = useState(prefill?.location ?? "");
+
+  const [title, setTitle] = useState("");
+  const [notes, setNotes] = useState("");
+  const [location, setLocation] = useState("");
   const [date, setDate] = useState(today);
-  const [time, setTime] = useState(
-    prefill?.startHour != null ? `${String(prefill.startHour).padStart(2, "0")}:00` : "12:00"
-  );
-  const [duration, setDuration] = useState(
-    prefill?.durationHours ? prefill.durationHours * 60 : 60
-  );
+  const [time, setTime] = useState("12:00");
+  const [duration, setDuration] = useState(60);
   const [busy, setBusy] = useState(false);
+
+  // Re-sync state whenever the dialog opens with new prefill/editing data
+  useEffect(() => {
+    if (!open) return;
+    if (editing) {
+      setTitle(editing.title);
+      setNotes(editing.notes ?? "");
+      setLocation(editing.location ?? "");
+      setDate(editing.scheduled_date);
+      setTime(editing.start_time.slice(0, 5));
+      setDuration(editing.duration_minutes);
+    } else {
+      setTitle(prefill?.title ?? "");
+      setNotes(prefill?.notes ?? "");
+      setLocation(prefill?.location ?? "");
+      setDate(defaultDate ?? new Date().toISOString().slice(0, 10));
+      setTime(prefill?.startHour != null ? `${String(prefill.startHour).padStart(2, "0")}:00` : "12:00");
+      setDuration(prefill?.durationHours ? prefill.durationHours * 60 : 60);
+    }
+  }, [open, editing, prefill, defaultDate]);
 
   if (!open) return null;
 
@@ -43,23 +73,39 @@ export function AddToCalendarDialog({ open, onClose, prefill, onSaved, defaultDa
     e.preventDefault();
     if (!user) return;
     setBusy(true);
-    const { error } = await supabase.from("scheduled_events").insert({
-      user_id: user.id,
-      event_id: prefill?.eventId ?? null,
-      title,
-      notes: notes || null,
-      location: location || null,
-      scheduled_date: date,
-      start_time: time + ":00",
-      duration_minutes: duration,
-      color: prefill?.color ?? null,
-    });
-    setBusy(false);
-    if (error) {
-      toast.error(error.message);
-      return;
+
+    if (isEdit && editing) {
+      const { error } = await supabase
+        .from("scheduled_events")
+        .update({
+          title,
+          notes: notes || null,
+          location: location || null,
+          scheduled_date: date,
+          start_time: time + ":00",
+          duration_minutes: duration,
+        })
+        .eq("id", editing.id);
+      setBusy(false);
+      if (error) return toast.error(error.message);
+      toast.success("Event updated");
+    } else {
+      const { error } = await supabase.from("scheduled_events").insert({
+        user_id: user.id,
+        event_id: prefill?.eventId ?? null,
+        title,
+        notes: notes || null,
+        location: location || null,
+        scheduled_date: date,
+        start_time: time + ":00",
+        duration_minutes: duration,
+        color: prefill?.color ?? null,
+      });
+      setBusy(false);
+      if (error) return toast.error(error.message);
+      toast.success("Added to your calendar");
     }
-    toast.success("Added to your calendar");
+
     onSaved?.();
     onClose();
   };
@@ -72,8 +118,10 @@ export function AddToCalendarDialog({ open, onClose, prefill, onSaved, defaultDa
       >
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h2 className="font-display text-3xl">Add to your day</h2>
-            <p className="text-sm text-ink/70">Save this to your personal calendar.</p>
+            <h2 className="font-display text-3xl">{isEdit ? "Edit event" : "Add to your day"}</h2>
+            <p className="text-sm text-ink/70">
+              {isEdit ? "Update the details below." : "Save this to your personal calendar."}
+            </p>
           </div>
           <button onClick={onClose} className="h-9 w-9 grid place-items-center bg-paper border-2 border-ink rounded-full">
             <X className="h-4 w-4" />
@@ -117,7 +165,7 @@ export function AddToCalendarDialog({ open, onClose, prefill, onSaved, defaultDa
               disabled={busy}
               className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-ink text-paper border-2 border-ink rounded-full font-bold text-sm shadow-[3px_3px_0_0_var(--coral)] hover:translate-y-0.5 transition-transform disabled:opacity-50"
             >
-              <CalendarPlus className="h-4 w-4" /> Save to calendar
+              {isEdit ? <><Save className="h-4 w-4" /> Save changes</> : <><CalendarPlus className="h-4 w-4" /> Save to calendar</>}
             </button>
           </form>
         )}
