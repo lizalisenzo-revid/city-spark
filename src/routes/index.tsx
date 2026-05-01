@@ -192,9 +192,18 @@ function CityPicker({ city, setCity }: { city: City; setCity: (c: City) => void 
   );
 }
 
-function DayNightSwitch({ time, setTime }: { time: TimeOfDay; setTime: (t: TimeOfDay) => void }) {
+function DayNightSwitch({ time, setTime }: { time: TimeOfDay | "all"; setTime: (t: TimeOfDay | "all") => void }) {
   return (
     <div className="inline-flex items-center p-1 bg-cream border-2 border-ink rounded-full shadow-poster-sm">
+      <button
+        onClick={() => setTime("all")}
+        className={cn(
+          "inline-flex items-center gap-2 px-5 py-2 rounded-full font-bold text-sm transition-all",
+          time === "all" ? "bg-coral text-paper border-2 border-ink" : "text-ink/60 hover:text-ink"
+        )}
+      >
+        <Sparkles className="h-4 w-4" /> All
+      </button>
       <button
         onClick={() => setTime("day")}
         className={cn(
