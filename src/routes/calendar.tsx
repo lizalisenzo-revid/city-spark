@@ -42,7 +42,7 @@ const STICKY_TILT = ["-rotate-1", "rotate-1", "-rotate-2", "rotate-2", "rotate-0
 const HOUR_START = 7;   // 7am
 const HOUR_END = 24;    // midnight (exclusive)
 const HOURS = Array.from({ length: HOUR_END - HOUR_START }, (_, i) => HOUR_START + i);
-const HOUR_PX = 56;     // height of one hour row in expanded view
+const HOUR_PX = 96;     // height of one hour row in expanded view — roomy for big poster stickies
 
 // Lookup poster image by seed event id
 const POSTER_BY_ID: Record<string, string> = Object.fromEntries(
@@ -396,6 +396,7 @@ function ExpandedDay({ dateKey, events, dragOverHour, setDragOverHour, onMoveEve
                 tilt={STICKY_TILT[i % STICKY_TILT.length]}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                size="large"
               />
             </div>
           );
@@ -413,11 +414,13 @@ interface StickyProps {
   onEdit: (ev: EditingEvent) => void;
   onDelete: (id: string) => void;
   compact?: boolean;
+  size?: "small" | "large";
 }
 
-function StickyNote({ ev, tilt, onEdit, onDelete, compact }: StickyProps) {
+function StickyNote({ ev, tilt, onEdit, onDelete, compact, size = "small" }: StickyProps) {
   const poster = ev.event_id ? POSTER_BY_ID[ev.event_id] : undefined;
   const bg = ev.color ? COLOR_BG[ev.color] ?? "bg-paper" : "bg-paper";
+  const isLarge = size === "large" && !compact;
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData("text/event-id", ev.id);
@@ -425,6 +428,56 @@ function StickyNote({ ev, tilt, onEdit, onDelete, compact }: StickyProps) {
     e.dataTransfer.effectAllowed = "move";
   };
 
+  // ----- LARGE: poster-forward sticky for expanded day view -----
+  if (isLarge) {
+    return (
+      <div
+        draggable
+        onDragStart={handleDragStart}
+        className={cn(
+          "group relative border-2 border-ink rounded-xl overflow-hidden cursor-grab active:cursor-grabbing transition-transform hover:-translate-y-0.5",
+          "shadow-[4px_4px_0_0_var(--ink)]",
+          bg, tilt
+        )}
+      >
+        {poster ? (
+          <div className="relative aspect-[16/7] w-full overflow-hidden bg-cream">
+            <img src={poster} alt="" className="absolute inset-0 h-full w-full object-cover" draggable={false} />
+            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/55 to-transparent" />
+            <div className="absolute left-2 bottom-1.5 right-2 text-paper">
+              <div className="font-display text-base leading-tight drop-shadow-sm truncate">{ev.title}</div>
+              <div className="text-[11px] font-bold uppercase tracking-wider opacity-90">{fmtTime(ev.start_time)}</div>
+            </div>
+          </div>
+        ) : (
+          <div className="px-3 py-2.5">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-ink/60">{fmtTime(ev.start_time)}</div>
+            <div className="font-display text-lg leading-tight truncate">{ev.title}</div>
+            {ev.location && <div className="text-[11px] text-ink/60 truncate">{ev.location}</div>}
+          </div>
+        )}
+
+        <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit(ev as EditingEvent); }}
+            className="h-6 w-6 grid place-items-center bg-paper border border-ink rounded shadow-sm"
+            aria-label="Edit"
+          >
+            <Pencil className="h-3 w-3" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(ev.id); }}
+            className="h-6 w-6 grid place-items-center bg-paper border border-ink rounded shadow-sm"
+            aria-label="Delete"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ----- SMALL / COMPACT: thumbnail + title + time row (used in collapsed columns) -----
   return (
     <div
       draggable
