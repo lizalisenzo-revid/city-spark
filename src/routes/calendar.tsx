@@ -111,7 +111,9 @@ function CalendarPage() {
     return <div className="min-h-screen grid place-items-center text-ink/60">Loading…</div>;
   }
 
-  const days = view === "day" ? [new Date(anchor)] : weekDays(anchor);
+  const days = view === "day" ? [new Date(anchor)] : nDays(anchor, 5);
+  const todayKey = ymd(new Date());
+  const canGoBack = view === "day" ? ymd(anchor) > todayKey : ymd(anchor) > todayKey;
 
   return (
     <div className="min-h-screen bg-paper text-ink">
