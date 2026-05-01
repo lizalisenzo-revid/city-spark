@@ -53,7 +53,7 @@ function CalendarPage() {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [view, setView] = useState<"day" | "week">("week");
-  const [anchor, setAnchor] = useState(() => new Date());
+  const [anchor, setAnchor] = useState(() => { const d = new Date(); d.setHours(0,0,0,0); return d; });
   const [events, setEvents] = useState<ScheduledEvent[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogDate, setDialogDate] = useState<string | undefined>();
@@ -170,11 +170,16 @@ function CalendarPage() {
 
         {/* Nav */}
         <div className="flex items-center justify-between mb-5">
-          <button onClick={() => shift(setAnchor, anchor, view, -1)} className="h-10 w-10 grid place-items-center border-2 border-ink rounded-full bg-cream hover:bg-lemon">
+          <button
+            onClick={() => shift(setAnchor, anchor, view, -1)}
+            disabled={!canGoBack}
+            className="h-10 w-10 grid place-items-center border-2 border-ink rounded-full bg-cream hover:bg-lemon disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-cream"
+            aria-label="Previous"
+          >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <h2 className="font-display text-2xl">{rangeLabel(view, anchor)}</h2>
-          <button onClick={() => shift(setAnchor, anchor, view, 1)} className="h-10 w-10 grid place-items-center border-2 border-ink rounded-full bg-cream hover:bg-lemon">
+          <button onClick={() => shift(setAnchor, anchor, view, 1)} className="h-10 w-10 grid place-items-center border-2 border-ink rounded-full bg-cream hover:bg-lemon" aria-label="Next">
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
@@ -182,7 +187,7 @@ function CalendarPage() {
         {/* Grid — items-start so each column has independent height */}
         <div className={cn(
           "grid gap-3 items-start",
-          view === "day" ? "grid-cols-1" : "grid-cols-1 md:grid-cols-7"
+          view === "day" ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-5"
         )}>
           {days.map((d) => {
             const key = ymd(d);
