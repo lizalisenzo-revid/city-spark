@@ -274,7 +274,7 @@ function DayColumn(props: DayColumnProps) {
         isToday && "shadow-[3px_3px_0_0_var(--coral)]",
         isExpanded ? "min-h-[200px]" : "min-h-[180px]",
         // In week view, an expanded day grows wider so thumbnails are legible
-        isWeekView && isExpanded && "md:col-span-4"
+        isWeekView && isExpanded && "md:col-span-3"
       )}
       onDragOver={(e) => { if (!isExpanded) e.preventDefault(); }}
       onDrop={(e) => { if (!isExpanded) handleColumnDrop(e); }}
@@ -484,19 +484,21 @@ function startOfWeek(d: Date) {
   const x = new Date(d); const dow = (x.getDay() + 6) % 7;
   x.setDate(x.getDate() - dow); x.setHours(0,0,0,0); return x;
 }
-function weekDays(d: Date) {
-  const s = startOfWeek(d);
-  return Array.from({ length: 7 }, (_, i) => { const x = new Date(s); x.setDate(s.getDate() + i); return x; });
+function nDays(start: Date, n: number) {
+  const s = new Date(start); s.setHours(0,0,0,0);
+  return Array.from({ length: n }, (_, i) => { const x = new Date(s); x.setDate(s.getDate() + i); return x; });
 }
 function shift(set: (d: Date) => void, cur: Date, view: "day" | "week", dir: 1 | -1) {
+  const today = new Date(); today.setHours(0,0,0,0);
   const x = new Date(cur);
   if (view === "day") x.setDate(x.getDate() + dir);
-  else x.setDate(x.getDate() + dir * 7);
+  else x.setDate(x.getDate() + dir * 5);
+  if (x < today) return;
   set(x);
 }
 function rangeLabel(view: "day" | "week", d: Date) {
   if (view === "day") return d.toLocaleDateString("en-ZA", { weekday: "long", day: "numeric", month: "long" });
-  const s = startOfWeek(d); const e = new Date(s); e.setDate(s.getDate() + 6);
+  const s = new Date(d); const e = new Date(s); e.setDate(s.getDate() + 4);
   return `${s.toLocaleDateString("en-ZA", { day: "numeric", month: "short" })} – ${e.toLocaleDateString("en-ZA", { day: "numeric", month: "short" })}`;
 }
 function fmtTime(t: string) {
