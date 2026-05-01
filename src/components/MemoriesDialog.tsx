@@ -372,23 +372,7 @@ async function buildCollage(
   return canvas.toDataURL("image/jpeg", 0.92);
 }
 
-function drawImageCover(
-  ctx: CanvasRenderingContext2D,
-  img: HTMLImageElement,
-  x: number, y: number, w: number, h: number,
-) {
-  const ir = img.width / img.height;
-  const tr = w / h;
-  let sx = 0, sy = 0, sw = img.width, sh = img.height;
-  if (ir > tr) {
-    sw = img.height * tr;
-    sx = (img.width - sw) / 2;
-  } else {
-    sh = img.width / tr;
-    sy = (img.height - sh) / 2;
-  }
-  ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
-}
+
 
 function fitText(ctx: CanvasRenderingContext2D, text: string, maxW: number): string {
   if (ctx.measureText(text).width <= maxW) return text;
