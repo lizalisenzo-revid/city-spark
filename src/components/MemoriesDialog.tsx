@@ -79,6 +79,19 @@ export function MemoriesDialog({
     }
   };
 
+  const handleSaveToScrapbook = () => {
+    if (!previewUrl) return;
+    saveCollage({
+      eventId: event.id,
+      eventTitle: event.title,
+      eventArea: event.area,
+      dataUrl: previewUrl,
+      layout,
+    });
+    setSavedFlash(true);
+    setTimeout(() => setSavedFlash(false), 1800);
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 bg-ink/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
