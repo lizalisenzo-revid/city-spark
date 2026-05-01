@@ -42,7 +42,7 @@ const STICKY_TILT = ["-rotate-1", "rotate-1", "-rotate-2", "rotate-2", "rotate-0
 const HOUR_START = 7;   // 7am
 const HOUR_END = 24;    // midnight (exclusive)
 const HOURS = Array.from({ length: HOUR_END - HOUR_START }, (_, i) => HOUR_START + i);
-const HOUR_PX = 56;     // height of one hour row in expanded view
+const HOUR_PX = 96;     // height of one hour row in expanded view — roomy for big poster stickies
 
 // Lookup poster image by seed event id
 const POSTER_BY_ID: Record<string, string> = Object.fromEntries(
@@ -396,6 +396,7 @@ function ExpandedDay({ dateKey, events, dragOverHour, setDragOverHour, onMoveEve
                 tilt={STICKY_TILT[i % STICKY_TILT.length]}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                size="large"
               />
             </div>
           );
