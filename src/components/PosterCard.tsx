@@ -1,5 +1,5 @@
 import { CityEvent } from "@/data/events";
-import { Heart, MapPin, Clock, CalendarPlus } from "lucide-react";
+import { Heart, MapPin, Clock, CalendarPlus, Navigation } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { AddToCalendarDialog, buildPrefillFromEvent } from "@/components/AddToCalendarDialog";
@@ -19,6 +19,11 @@ interface Props {
   favored: boolean;
   onToggleFav: (id: string) => void;
   size?: "md" | "lg";
+}
+
+function getMapsUrl(event: CityEvent): string {
+  const query = event.mapsQuery ?? `${event.title}, ${event.area}, ${event.city}`;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
 export function PosterCard({ event, favored, onToggleFav, size = "md" }: Props) {
@@ -80,12 +85,25 @@ export function PosterCard({ event, favored, onToggleFav, size = "md" }: Props) 
           <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{fmtTime(event.startHour)}</span>
           <span className="ml-auto px-2 py-0.5 bg-ink text-paper rounded-sm">{event.price}</span>
         </div>
-        <button
-          onClick={(e) => { e.preventDefault(); setAddOpen(true); }}
-          className="mt-2 w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-paper border-2 border-ink rounded-full hover:bg-lemon transition-colors"
-        >
-          <CalendarPlus className="h-3.5 w-3.5" /> Add to calendar
-        </button>
+
+        {/* Action buttons */}
+        <div className="flex gap-2 pt-1">
+          <a
+            href={getMapsUrl(event)}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-paper border-2 border-ink rounded-full hover:bg-mint transition-colors"
+          >
+            <Navigation className="h-3.5 w-3.5" /> Directions
+          </a>
+          <button
+            onClick={(e) => { e.preventDefault(); setAddOpen(true); }}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-paper border-2 border-ink rounded-full hover:bg-lemon transition-colors"
+          >
+            <CalendarPlus className="h-3.5 w-3.5" /> Calendar
+          </button>
+        </div>
       </div>
     </article>
     <AddToCalendarDialog
