@@ -194,6 +194,7 @@ function CalendarPage() {
                 date={d}
                 isToday={isToday}
                 isExpanded={isExpanded}
+                isWeekView={view === "week"}
                 onToggleExpand={() => setExpandedDay(expandedDay === key ? null : key)}
                 events={dayEvents}
                 onAdd={() => { setEditingEvent(null); setDialogDate(key); setDialogOpen(true); }}
@@ -233,6 +234,7 @@ interface DayColumnProps {
   isToday: boolean;
   isExpanded: boolean;
   allowExpandToggle: boolean;
+  isWeekView: boolean;
   onToggleExpand: () => void;
   events: ScheduledEvent[];
   onAdd: () => void;
@@ -243,7 +245,7 @@ interface DayColumnProps {
 
 function DayColumn(props: DayColumnProps) {
   const {
-    dateKey, date, isToday, isExpanded, allowExpandToggle, onToggleExpand,
+    dateKey, date, isToday, isExpanded, allowExpandToggle, isWeekView, onToggleExpand,
     events, onAdd, onEdit, onDelete, onMoveEvent,
   } = props;
 
@@ -262,7 +264,9 @@ function DayColumn(props: DayColumnProps) {
       className={cn(
         "bg-cream border-2 border-ink rounded-xl p-3 flex flex-col transition-all",
         isToday && "shadow-[3px_3px_0_0_var(--coral)]",
-        isExpanded ? "min-h-[200px]" : "min-h-[180px]"
+        isExpanded ? "min-h-[200px]" : "min-h-[180px]",
+        // In week view, an expanded day grows wider so thumbnails are legible
+        isWeekView && isExpanded && "md:col-span-4"
       )}
       onDragOver={(e) => { if (!isExpanded) e.preventDefault(); }}
       onDrop={(e) => { if (!isExpanded) handleColumnDrop(e); }}
