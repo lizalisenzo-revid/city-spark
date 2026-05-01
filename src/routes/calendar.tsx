@@ -41,6 +41,7 @@ function CalendarPage() {
   const [events, setEvents] = useState<ScheduledEvent[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogDate, setDialogDate] = useState<string | undefined>();
+  const [editingEvent, setEditingEvent] = useState<EditingEvent | null>(null);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth" });
