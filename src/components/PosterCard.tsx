@@ -1,8 +1,9 @@
 import { CityEvent } from "@/data/events";
-import { Heart, MapPin, Clock, CalendarPlus, Navigation } from "lucide-react";
+import { Heart, MapPin, Clock, CalendarPlus, Navigation, Camera } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { AddToCalendarDialog, buildPrefillFromEvent } from "@/components/AddToCalendarDialog";
+import { MemoriesDialog } from "@/components/MemoriesDialog";
 
 const accentBg: Record<CityEvent["accent"], string> = {
   coral: "bg-coral",
@@ -19,6 +20,7 @@ interface Props {
   favored: boolean;
   onToggleFav: (id: string) => void;
   size?: "md" | "lg";
+  showMemories?: boolean;
 }
 
 function getMapsUrl(event: CityEvent): string {
@@ -26,8 +28,9 @@ function getMapsUrl(event: CityEvent): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
-export function PosterCard({ event, favored, onToggleFav, size = "md" }: Props) {
+export function PosterCard({ event, favored, onToggleFav, size = "md", showMemories = false }: Props) {
   const [addOpen, setAddOpen] = useState(false);
+  const [memOpen, setMemOpen] = useState(false);
   const fmtTime = (h: number) => {
     const period = h >= 12 ? "pm" : "am";
     const hh = ((h + 11) % 12) + 1;
@@ -104,6 +107,15 @@ export function PosterCard({ event, favored, onToggleFav, size = "md" }: Props) 
             <CalendarPlus className="h-3.5 w-3.5" /> Calendar
           </button>
         </div>
+
+        {showMemories && (
+          <button
+            onClick={(e) => { e.preventDefault(); setMemOpen(true); }}
+            className="w-full mt-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold bg-coral text-paper border-2 border-ink rounded-full shadow-[2px_2px_0_0_var(--ink)] hover:translate-y-0.5 transition-transform"
+          >
+            <Camera className="h-3.5 w-3.5" /> Memories & collage
+          </button>
+        )}
       </div>
     </article>
     <AddToCalendarDialog
@@ -111,6 +123,9 @@ export function PosterCard({ event, favored, onToggleFav, size = "md" }: Props) 
       onClose={() => setAddOpen(false)}
       prefill={buildPrefillFromEvent(event)}
     />
+    {showMemories && (
+      <MemoriesDialog event={event} open={memOpen} onClose={() => setMemOpen(false)} />
+    )}
     </>
   );
 }

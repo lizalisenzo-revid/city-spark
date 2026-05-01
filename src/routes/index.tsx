@@ -103,11 +103,16 @@ function HomePage() {
 
         {view === "favs" && (
           <section className="mt-8">
-            <h2 className="font-display text-4xl mb-6">Your saved <span className="text-coral">moments</span></h2>
+            <h2 className="font-display text-4xl mb-2">Your saved <span className="text-coral">moments</span></h2>
+            <p className="text-ink/70 mb-6">Tap <span className="font-bold">Memories & collage</span> on any spot to scrapbook your photos and export an Instagram-ready post.</p>
             {favEvents.length === 0 ? (
               <EmptyFavs onBrowse={() => setView("discover")} />
             ) : (
-              <CollageGrid events={favEvents} fav={fav} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
+                {favEvents.map((e) => (
+                  <PosterCard key={e.id} event={e} favored={fav.has(e.id)} onToggleFav={fav.toggle} showMemories />
+                ))}
+              </div>
             )}
           </section>
         )}
