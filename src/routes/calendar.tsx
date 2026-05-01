@@ -224,8 +224,9 @@ function CalendarPage() {
 
       <AddToCalendarDialog
         open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
+        onClose={() => { setDialogOpen(false); setEditingEvent(null); }}
         defaultDate={dialogDate}
+        editing={editingEvent}
         onSaved={load}
       />
     </div>
