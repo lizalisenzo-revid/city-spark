@@ -480,10 +480,6 @@ function ymd(d: Date) {
   const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
-function startOfWeek(d: Date) {
-  const x = new Date(d); const dow = (x.getDay() + 6) % 7;
-  x.setDate(x.getDate() - dow); x.setHours(0,0,0,0); return x;
-}
 function nDays(start: Date, n: number) {
   const s = new Date(start); s.setHours(0,0,0,0);
   return Array.from({ length: n }, (_, i) => { const x = new Date(s); x.setDate(s.getDate() + i); return x; });
