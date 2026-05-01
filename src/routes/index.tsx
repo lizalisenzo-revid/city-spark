@@ -1,9 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { CITIES, CATEGORIES, VIBES, EVENTS, type City, type TimeOfDay, type Vibe, type Category, type CityEvent } from "@/data/events";
 import { PosterCard } from "@/components/PosterCard";
 import { useFavorites } from "@/hooks/useFavorites";
-import { Sun, Moon, Sparkles, Heart, Calendar, ChevronDown } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { Sun, Moon, Sparkles, Heart, Calendar, ChevronDown, LogIn, User as UserIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -118,6 +119,7 @@ function HomePage() {
 }
 
 function Header({ view, setView, favCount }: { view: View; setView: (v: View) => void; favCount: number }) {
+  const { user } = useAuth();
   const tabs: { id: View; label: string; icon: React.ReactNode }[] = [
     { id: "discover", label: "Discover", icon: <Sparkles className="h-4 w-4" /> },
     { id: "plan", label: "Plan My Day", icon: <Calendar className="h-4 w-4" /> },
@@ -146,6 +148,13 @@ function Header({ view, setView, favCount }: { view: View; setView: (v: View) =>
               <span className="hidden sm:inline">{t.label}</span>
             </button>
           ))}
+          <Link
+            to={user ? "/calendar" : "/auth"}
+            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm font-bold border-2 border-ink rounded-full bg-coral text-paper shadow-[2px_2px_0_0_var(--ink)] hover:translate-y-0.5 transition-transform"
+          >
+            {user ? <UserIcon className="h-4 w-4" /> : <LogIn className="h-4 w-4" />}
+            <span className="hidden sm:inline">{user ? "My Calendar" : "Sign in"}</span>
+          </Link>
         </nav>
       </div>
     </header>
