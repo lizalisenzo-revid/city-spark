@@ -2,9 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { CITIES, CATEGORIES, VIBES, EVENTS, type City, type TimeOfDay, type Vibe, type Category, type CityEvent } from "@/data/events";
 import { PosterCard } from "@/components/PosterCard";
+import { ScrapbookView } from "@/components/ScrapbookView";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useAuth } from "@/hooks/useAuth";
-import { Sun, Moon, Sparkles, Heart, Calendar, ChevronDown, LogIn, User as UserIcon } from "lucide-react";
+import { Sun, Moon, Sparkles, Heart, Calendar, ChevronDown, LogIn, User as UserIcon, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -19,7 +20,7 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
-type View = "discover" | "plan" | "favs";
+type View = "discover" | "plan" | "favs" | "scrapbook";
 
 function HomePage() {
   const [city, setCity] = useState<City>("Centurion");
@@ -103,8 +104,8 @@ function HomePage() {
 
         {view === "favs" && (
           <section className="mt-8">
-            <h2 className="font-display text-4xl mb-2">Your saved <span className="text-coral">moments</span></h2>
-            <p className="text-ink/70 mb-6">Tap <span className="font-bold">Memories & collage</span> on any spot to scrapbook your photos and export an Instagram-ready post.</p>
+            <h2 className="font-display text-4xl mb-2">Your <span className="text-coral">memories</span></h2>
+            <p className="text-ink/70 mb-6">Tap <span className="font-bold">Memories & collage</span> on any spot to scrapbook your photos and save them to your account.</p>
             {favEvents.length === 0 ? (
               <EmptyFavs onBrowse={() => setView("discover")} />
             ) : (
@@ -116,6 +117,8 @@ function HomePage() {
             )}
           </section>
         )}
+
+        {view === "scrapbook" && <ScrapbookView onBrowse={() => setView("discover")} />}
       </main>
 
       <Footer />
@@ -128,7 +131,8 @@ function Header({ view, setView, favCount }: { view: View; setView: (v: View) =>
   const tabs: { id: View; label: string; icon: React.ReactNode }[] = [
     { id: "discover", label: "Discover", icon: <Sparkles className="h-4 w-4" /> },
     { id: "plan", label: "Plan My Day", icon: <Calendar className="h-4 w-4" /> },
-    { id: "favs", label: `Saved${favCount ? ` · ${favCount}` : ""}`, icon: <Heart className="h-4 w-4" /> },
+    { id: "favs", label: `Memories${favCount ? ` · ${favCount}` : ""}`, icon: <Heart className="h-4 w-4" /> },
+    { id: "scrapbook", label: "Scrapbook", icon: <BookOpen className="h-4 w-4" /> },
   ];
   return (
     <header className="sticky top-0 z-40 border-b-2 border-ink bg-paper/90 backdrop-blur">

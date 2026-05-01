@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CityEvent } from "@/data/events";
-import { useMemories, loadImage, type Memory } from "@/hooks/useMemories";
-import { Camera, Upload, X, Download, Share2, Trash2, Sparkles, Grid3x3, Square, LayoutGrid } from "lucide-react";
+import { useMemories, loadImage, saveCollage, type Memory } from "@/hooks/useMemories";
+import { Camera, Upload, X, Download, Share2, Trash2, Sparkles, Grid3x3, Square, LayoutGrid, BookmarkPlus, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Layout = "square" | "story" | "portrait";
@@ -25,6 +25,7 @@ export function MemoriesDialog({
   const [layout, setLayout] = useState<Layout>("portrait");
   const [busy, setBusy] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [savedFlash, setSavedFlash] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -76,6 +77,19 @@ export function MemoriesDialog({
     } catch {
       handleDownload();
     }
+  };
+
+  const handleSaveToScrapbook = () => {
+    if (!previewUrl) return;
+    saveCollage({
+      eventId: event.id,
+      eventTitle: event.title,
+      eventArea: event.area,
+      dataUrl: previewUrl,
+      layout,
+    });
+    setSavedFlash(true);
+    setTimeout(() => setSavedFlash(false), 1800);
   };
 
   return (
@@ -216,18 +230,28 @@ export function MemoriesDialog({
 
         {/* Footer actions */}
         {memories.length > 0 && (
-          <div className="border-t-2 border-ink bg-cream p-4 grid grid-cols-2 gap-3">
+          <div className="border-t-2 border-ink bg-cream p-4 grid grid-cols-3 gap-2 sm:gap-3">
+            <button
+              onClick={handleSaveToScrapbook}
+              disabled={!previewUrl || busy}
+              className={cn(
+                "inline-flex items-center justify-center gap-2 px-3 py-3 font-bold border-2 border-ink rounded-full shadow-[3px_3px_0_0_var(--ink)] hover:translate-y-0.5 transition-transform text-sm disabled:opacity-50",
+                savedFlash ? "bg-mint" : "bg-coral text-paper"
+              )}
+            >
+              {savedFlash ? <><Check className="h-4 w-4" /> Saved</> : <><BookmarkPlus className="h-4 w-4" /> <span className="hidden sm:inline">Save to</span> scrapbook</>}
+            </button>
             <button
               onClick={handleDownload}
               disabled={!previewUrl || busy}
-              className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-paper font-bold border-2 border-ink rounded-full shadow-[3px_3px_0_0_var(--ink)] hover:translate-y-0.5 transition-transform text-sm disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 px-3 py-3 bg-paper font-bold border-2 border-ink rounded-full shadow-[3px_3px_0_0_var(--ink)] hover:translate-y-0.5 transition-transform text-sm disabled:opacity-50"
             >
               <Download className="h-4 w-4" /> Download
             </button>
             <button
               onClick={handleShare}
               disabled={!previewUrl || busy}
-              className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-magenta text-paper font-bold border-2 border-ink rounded-full shadow-[3px_3px_0_0_var(--ink)] hover:translate-y-0.5 transition-transform text-sm disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 px-3 py-3 bg-magenta text-paper font-bold border-2 border-ink rounded-full shadow-[3px_3px_0_0_var(--ink)] hover:translate-y-0.5 transition-transform text-sm disabled:opacity-50"
             >
               <Share2 className="h-4 w-4" /> Share
             </button>
@@ -277,34 +301,46 @@ async function buildCollage(
   const accents = ["#FF5A4F", "#FFD33D", "#7DD3C8", "#A78BFA", "#FFA94D"];
 
   tiles.forEach((t, i) => {
-    const x = areaX + t.x;
-    const y = areaY + t.y;
-    const w = t.w;
-    const h = t.h;
     const img = imgs[i];
     const rotation = (Math.random() * 6 - 3) * (Math.PI / 180);
 
+    // Fit the polaroid frame to the photo's aspect ratio inside the tile
+    // so the image is shown FULLY (no cropping/squashing).
+    const border = Math.round(Math.min(t.w, t.h) * 0.04);
+    const tapeH = 22;
+    const innerMaxW = t.w - border * 2;
+    const innerMaxH = t.h - border * 2 - border - tapeH;
+    const ir = img.width / img.height;
+    let innerW = innerMaxW;
+    let innerH = innerW / ir;
+    if (innerH > innerMaxH) {
+      innerH = innerMaxH;
+      innerW = innerH * ir;
+    }
+    const frameW = innerW + border * 2;
+    const frameH = innerH + border * 2 + border; // extra bottom for caption-strip
+    const cx = areaX + t.x + t.w / 2;
+    const cy = areaY + t.y + t.h / 2;
+
     ctx.save();
-    ctx.translate(x + w / 2, y + h / 2);
+    ctx.translate(cx, cy);
     ctx.rotate(rotation);
 
     // Drop shadow
     ctx.fillStyle = "rgba(0,0,0,0.18)";
-    ctx.fillRect(-w / 2 + 8, -h / 2 + 10, w, h);
+    ctx.fillRect(-frameW / 2 + 8, -frameH / 2 + 10, frameW, frameH);
 
     // White polaroid border
-    const border = Math.round(Math.min(w, h) * 0.04);
     ctx.fillStyle = "#FFFFFF";
-    ctx.fillRect(-w / 2, -h / 2, w, h);
+    ctx.fillRect(-frameW / 2, -frameH / 2, frameW, frameH);
 
-    // Image (cover-fit)
-    drawImageCover(ctx, img, -w / 2 + border, -h / 2 + border, w - border * 2, h - border * 2 - border);
+    // Image — full, uncropped (contain inside its frame)
+    ctx.drawImage(img, -innerW / 2, -frameH / 2 + border, innerW, innerH);
 
     // Tape strip
     ctx.fillStyle = accents[i % accents.length] + "CC";
-    const tapeW = Math.min(w * 0.3, 90);
-    const tapeH = 22;
-    ctx.fillRect(-tapeW / 2, -h / 2 - tapeH / 2, tapeW, tapeH);
+    const tapeW = Math.min(frameW * 0.3, 90);
+    ctx.fillRect(-tapeW / 2, -frameH / 2 - tapeH / 2, tapeW, tapeH);
 
     ctx.restore();
   });
@@ -336,23 +372,7 @@ async function buildCollage(
   return canvas.toDataURL("image/jpeg", 0.92);
 }
 
-function drawImageCover(
-  ctx: CanvasRenderingContext2D,
-  img: HTMLImageElement,
-  x: number, y: number, w: number, h: number,
-) {
-  const ir = img.width / img.height;
-  const tr = w / h;
-  let sx = 0, sy = 0, sw = img.width, sh = img.height;
-  if (ir > tr) {
-    sw = img.height * tr;
-    sx = (img.width - sw) / 2;
-  } else {
-    sh = img.width / tr;
-    sy = (img.height - sh) / 2;
-  }
-  ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
-}
+
 
 function fitText(ctx: CanvasRenderingContext2D, text: string, maxW: number): string {
   if (ctx.measureText(text).width <= maxW) return text;
