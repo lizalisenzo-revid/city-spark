@@ -63,8 +63,8 @@ export function MemoriesDialog({
     try {
       const blob = await (await fetch(previewUrl)).blob();
       const file = new File([blob], `${event.title}-memories.jpg`, { type: "image/jpeg" });
-      // @ts-expect-error - canShare with files
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      const nav = navigator as Navigator & { canShare?: (data: { files: File[] }) => boolean };
+      if (nav.canShare && nav.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
           title: event.title,
