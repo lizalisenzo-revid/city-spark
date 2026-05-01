@@ -334,72 +334,120 @@ function DayColumn(props: DayColumnProps) {
   );
 }
 
-/* ---------- Expanded day with hour grid ---------- */
+/* ---------- Expanded day: Daytime / Nighttime zones ---------- */
 
 interface ExpandedDayProps {
   dateKey: string;
   events: ScheduledEvent[];
-  dragOverHour: number | null;
-  setDragOverHour: (h: number | null) => void;
   onMoveEvent: (id: string, newDate: string, newTime: string) => void;
   onEdit: (ev: EditingEvent) => void;
   onDelete: (id: string) => void;
 }
 
-function ExpandedDay({ dateKey, events, dragOverHour, setDragOverHour, onMoveEvent, onEdit, onDelete }: ExpandedDayProps) {
-  const gridRef = useRef<HTMLDivElement>(null);
+function isNight(time: string) {
+  const h = Number(time.slice(0, 2));
+  return h >= NIGHT_HOUR || h < 5;
+}
+
+function ExpandedDay({ dateKey, events, onMoveEvent, onEdit, onDelete }: ExpandedDayProps) {
+  const day = events.filter((e) => !isNight(e.start_time))
+    .sort((a, b) => a.start_time.localeCompare(b.start_time));
+  const night = events.filter((e) => isNight(e.start_time))
+    .sort((a, b) => a.start_time.localeCompare(b.start_time));
 
   return (
-    <div className="relative mt-1" style={{ height: HOURS.length * HOUR_PX }}>
-      {/* Hour rows */}
-      <div ref={gridRef} className="absolute inset-0">
-        {HOURS.map((h) => (
-          <div
-            key={h}
-            className={cn(
-              "border-t border-dashed border-ink/20 flex items-start gap-2 pl-10 pr-1 transition-colors",
-              dragOverHour === h && "bg-lemon/40"
-            )}
-            style={{ height: HOUR_PX }}
-            onDragOver={(e) => { e.preventDefault(); setDragOverHour(h); }}
-            onDragLeave={() => { if (dragOverHour === h) setDragOverHour(null); }}
-            onDrop={(e) => {
-              e.preventDefault();
-              const id = e.dataTransfer.getData("text/event-id");
-              if (id) onMoveEvent(id, dateKey, `${String(h).padStart(2, "0")}:00:00`);
-              setDragOverHour(null);
-            }}
-          >
-            <span className="absolute left-0 -mt-2 text-[10px] font-bold text-ink/40 w-9 text-right pr-1">
-              {fmtHour(h)}
-            </span>
-          </div>
-        ))}
+    <div className="mt-2 grid gap-3">
+      <Zone
+        label="Daytime"
+        emoji="☀️"
+        accent="bg-lemon"
+        items={day}
+        dateKey={dateKey}
+        onMoveEvent={onMoveEvent}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        defaultTime={DEFAULT_DAY_TIME}
+      />
+      <Zone
+        label="Nighttime"
+        emoji="🌙"
+        accent="bg-lilac"
+        items={night}
+        dateKey={dateKey}
+        onMoveEvent={onMoveEvent}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        defaultTime={DEFAULT_NIGHT_TIME}
+      />
+    </div>
+  );
+}
+
+interface ZoneProps {
+  label: string;
+  emoji: string;
+  accent: string;
+  items: ScheduledEvent[];
+  dateKey: string;
+  defaultTime: string;
+  onMoveEvent: (id: string, newDate: string, newTime: string) => void;
+  onEdit: (ev: EditingEvent) => void;
+  onDelete: (id: string) => void;
+}
+
+function Zone({ label, emoji, accent, items, dateKey, defaultTime, onMoveEvent, onEdit, onDelete }: ZoneProps) {
+  const [over, setOver] = useState(false);
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setOver(false);
+    const id = e.dataTransfer.getData("text/event-id");
+    const origTime = e.dataTransfer.getData("text/event-time");
+    if (!id) return;
+    // If the event already belongs to this zone, keep its original time;
+    // otherwise snap it to the zone's default time.
+    const targetIsNight = label === "Nighttime";
+    const sameZone = origTime ? (isNight(origTime) === targetIsNight) : false;
+    const newTime = sameZone ? origTime : defaultTime;
+    onMoveEvent(id, dateKey, newTime);
+  };
+
+  return (
+    <div
+      onDragOver={(e) => { e.preventDefault(); setOver(true); }}
+      onDragLeave={() => setOver(false)}
+      onDrop={handleDrop}
+      className={cn(
+        "rounded-xl border-2 border-ink p-3 transition-colors",
+        over ? "bg-lemon/30" : "bg-paper/60"
+      )}
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <span className={cn("inline-grid place-items-center h-7 w-7 border-2 border-ink rounded-full text-sm", accent)}>
+          {emoji}
+        </span>
+        <h3 className="font-display text-lg leading-none">{label}</h3>
+        <span className="text-[10px] font-bold uppercase tracking-widest text-ink/40 ml-auto">
+          {items.length} {items.length === 1 ? "plan" : "plans"}
+        </span>
       </div>
 
-      {/* Sticky notes positioned by start time */}
-      <div className="absolute inset-0 pl-10 pr-1 pointer-events-none">
-        {events.map((e, i) => {
-          const [hh, mm] = e.start_time.split(":").map(Number);
-          const top = (hh - HOUR_START) * HOUR_PX + (mm / 60) * HOUR_PX;
-          if (top < 0 || top > HOURS.length * HOUR_PX) return null;
-          return (
-            <div
+      {items.length === 0 ? (
+        <p className="text-xs text-ink/40 italic py-3 text-center">Drop a sticky here ✨</p>
+      ) : (
+        <div className="grid gap-2">
+          {items.map((e, i) => (
+            <StickyNote
               key={e.id}
-              className="absolute left-10 right-1 pointer-events-auto"
-              style={{ top }}
-            >
-              <StickyNote
-                ev={e}
-                tilt={STICKY_TILT[i % STICKY_TILT.length]}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                size="large"
-              />
-            </div>
-          );
-        })}
-      </div>
+              ev={e}
+              tilt={STICKY_TILT[i % STICKY_TILT.length]}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              size="large"
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
