@@ -130,6 +130,15 @@ export function AddToCalendarDialog({ open, onClose, prefill, onSaved, defaultDa
   );
 }
 
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="block text-xs font-bold uppercase tracking-widest text-ink/60 mb-1">{label}</span>
+      {children}
+    </label>
+  );
+}
+
 export function buildPrefillFromEvent(ev: CityEvent) {
   return {
     title: ev.title,
