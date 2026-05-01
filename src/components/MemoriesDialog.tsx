@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CityEvent } from "@/data/events";
-import { useMemories, loadImage, type Memory } from "@/hooks/useMemories";
-import { Camera, Upload, X, Download, Share2, Trash2, Sparkles, Grid3x3, Square, LayoutGrid } from "lucide-react";
+import { useMemories, loadImage, saveCollage, type Memory } from "@/hooks/useMemories";
+import { Camera, Upload, X, Download, Share2, Trash2, Sparkles, Grid3x3, Square, LayoutGrid, BookmarkPlus, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Layout = "square" | "story" | "portrait";
