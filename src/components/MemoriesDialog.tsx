@@ -301,34 +301,46 @@ async function buildCollage(
   const accents = ["#FF5A4F", "#FFD33D", "#7DD3C8", "#A78BFA", "#FFA94D"];
 
   tiles.forEach((t, i) => {
-    const x = areaX + t.x;
-    const y = areaY + t.y;
-    const w = t.w;
-    const h = t.h;
     const img = imgs[i];
     const rotation = (Math.random() * 6 - 3) * (Math.PI / 180);
 
+    // Fit the polaroid frame to the photo's aspect ratio inside the tile
+    // so the image is shown FULLY (no cropping/squashing).
+    const border = Math.round(Math.min(t.w, t.h) * 0.04);
+    const tapeH = 22;
+    const innerMaxW = t.w - border * 2;
+    const innerMaxH = t.h - border * 2 - border - tapeH;
+    const ir = img.width / img.height;
+    let innerW = innerMaxW;
+    let innerH = innerW / ir;
+    if (innerH > innerMaxH) {
+      innerH = innerMaxH;
+      innerW = innerH * ir;
+    }
+    const frameW = innerW + border * 2;
+    const frameH = innerH + border * 2 + border; // extra bottom for caption-strip
+    const cx = areaX + t.x + t.w / 2;
+    const cy = areaY + t.y + t.h / 2;
+
     ctx.save();
-    ctx.translate(x + w / 2, y + h / 2);
+    ctx.translate(cx, cy);
     ctx.rotate(rotation);
 
     // Drop shadow
     ctx.fillStyle = "rgba(0,0,0,0.18)";
-    ctx.fillRect(-w / 2 + 8, -h / 2 + 10, w, h);
+    ctx.fillRect(-frameW / 2 + 8, -frameH / 2 + 10, frameW, frameH);
 
     // White polaroid border
-    const border = Math.round(Math.min(w, h) * 0.04);
     ctx.fillStyle = "#FFFFFF";
-    ctx.fillRect(-w / 2, -h / 2, w, h);
+    ctx.fillRect(-frameW / 2, -frameH / 2, frameW, frameH);
 
-    // Image (cover-fit)
-    drawImageCover(ctx, img, -w / 2 + border, -h / 2 + border, w - border * 2, h - border * 2 - border);
+    // Image — full, uncropped (contain inside its frame)
+    ctx.drawImage(img, -innerW / 2, -frameH / 2 + border, innerW, innerH);
 
     // Tape strip
     ctx.fillStyle = accents[i % accents.length] + "CC";
-    const tapeW = Math.min(w * 0.3, 90);
-    const tapeH = 22;
-    ctx.fillRect(-tapeW / 2, -h / 2 - tapeH / 2, tapeW, tapeH);
+    const tapeW = Math.min(frameW * 0.3, 90);
+    ctx.fillRect(-tapeW / 2, -frameH / 2 - tapeH / 2, tapeW, tapeH);
 
     ctx.restore();
   });
