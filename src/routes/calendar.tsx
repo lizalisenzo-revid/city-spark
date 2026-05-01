@@ -69,8 +69,9 @@ function CalendarPage() {
       const d = ymd(anchor);
       return { start: d, end: d };
     }
-    const start = startOfWeek(anchor);
-    const end = new Date(start); end.setDate(start.getDate() + 6);
+    // 5-day window starting from anchor (anchor is clamped to today-or-later)
+    const start = new Date(anchor); start.setHours(0,0,0,0);
+    const end = new Date(start); end.setDate(start.getDate() + 4);
     return { start: ymd(start), end: ymd(end) };
   }, [view, anchor]);
 
