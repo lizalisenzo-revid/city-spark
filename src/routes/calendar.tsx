@@ -2,9 +2,9 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { AddToCalendarDialog } from "@/components/AddToCalendarDialog";
+import { AddToCalendarDialog, type EditingEvent } from "@/components/AddToCalendarDialog";
 import { toast } from "sonner";
-import { CalendarPlus, ChevronLeft, ChevronRight, Trash2, Sparkles, LogOut, Home, Calendar as CalIcon } from "lucide-react";
+import { CalendarPlus, ChevronLeft, ChevronRight, Trash2, Sparkles, LogOut, Home, Calendar as CalIcon, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/calendar")({
