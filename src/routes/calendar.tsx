@@ -53,7 +53,7 @@ function CalendarPage() {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [view, setView] = useState<"day" | "week">("week");
-  const [anchor, setAnchor] = useState(() => new Date());
+  const [anchor, setAnchor] = useState(() => { const d = new Date(); d.setHours(0,0,0,0); return d; });
   const [events, setEvents] = useState<ScheduledEvent[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogDate, setDialogDate] = useState<string | undefined>();
@@ -69,8 +69,9 @@ function CalendarPage() {
       const d = ymd(anchor);
       return { start: d, end: d };
     }
-    const start = startOfWeek(anchor);
-    const end = new Date(start); end.setDate(start.getDate() + 6);
+    // 5-day window starting from anchor (anchor is clamped to today-or-later)
+    const start = new Date(anchor); start.setHours(0,0,0,0);
+    const end = new Date(start); end.setDate(start.getDate() + 4);
     return { start: ymd(start), end: ymd(end) };
   }, [view, anchor]);
 
@@ -110,7 +111,9 @@ function CalendarPage() {
     return <div className="min-h-screen grid place-items-center text-ink/60">Loading…</div>;
   }
 
-  const days = view === "day" ? [new Date(anchor)] : weekDays(anchor);
+  const days = view === "day" ? [new Date(anchor)] : nDays(anchor, 5);
+  const todayKey = ymd(new Date());
+  const canGoBack = view === "day" ? ymd(anchor) > todayKey : ymd(anchor) > todayKey;
 
   return (
     <div className="min-h-screen bg-paper text-ink">
@@ -167,11 +170,16 @@ function CalendarPage() {
 
         {/* Nav */}
         <div className="flex items-center justify-between mb-5">
-          <button onClick={() => shift(setAnchor, anchor, view, -1)} className="h-10 w-10 grid place-items-center border-2 border-ink rounded-full bg-cream hover:bg-lemon">
+          <button
+            onClick={() => shift(setAnchor, anchor, view, -1)}
+            disabled={!canGoBack}
+            className="h-10 w-10 grid place-items-center border-2 border-ink rounded-full bg-cream hover:bg-lemon disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-cream"
+            aria-label="Previous"
+          >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <h2 className="font-display text-2xl">{rangeLabel(view, anchor)}</h2>
-          <button onClick={() => shift(setAnchor, anchor, view, 1)} className="h-10 w-10 grid place-items-center border-2 border-ink rounded-full bg-cream hover:bg-lemon">
+          <button onClick={() => shift(setAnchor, anchor, view, 1)} className="h-10 w-10 grid place-items-center border-2 border-ink rounded-full bg-cream hover:bg-lemon" aria-label="Next">
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
@@ -179,7 +187,7 @@ function CalendarPage() {
         {/* Grid — items-start so each column has independent height */}
         <div className={cn(
           "grid gap-3 items-start",
-          view === "day" ? "grid-cols-1" : "grid-cols-1 md:grid-cols-7"
+          view === "day" ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-5"
         )}>
           {days.map((d) => {
             const key = ymd(d);
@@ -266,7 +274,7 @@ function DayColumn(props: DayColumnProps) {
         isToday && "shadow-[3px_3px_0_0_var(--coral)]",
         isExpanded ? "min-h-[200px]" : "min-h-[180px]",
         // In week view, an expanded day grows wider so thumbnails are legible
-        isWeekView && isExpanded && "md:col-span-4"
+        isWeekView && isExpanded && "md:col-span-3"
       )}
       onDragOver={(e) => { if (!isExpanded) e.preventDefault(); }}
       onDrop={(e) => { if (!isExpanded) handleColumnDrop(e); }}
@@ -472,23 +480,21 @@ function ymd(d: Date) {
   const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
-function startOfWeek(d: Date) {
-  const x = new Date(d); const dow = (x.getDay() + 6) % 7;
-  x.setDate(x.getDate() - dow); x.setHours(0,0,0,0); return x;
-}
-function weekDays(d: Date) {
-  const s = startOfWeek(d);
-  return Array.from({ length: 7 }, (_, i) => { const x = new Date(s); x.setDate(s.getDate() + i); return x; });
+function nDays(start: Date, n: number) {
+  const s = new Date(start); s.setHours(0,0,0,0);
+  return Array.from({ length: n }, (_, i) => { const x = new Date(s); x.setDate(s.getDate() + i); return x; });
 }
 function shift(set: (d: Date) => void, cur: Date, view: "day" | "week", dir: 1 | -1) {
+  const today = new Date(); today.setHours(0,0,0,0);
   const x = new Date(cur);
   if (view === "day") x.setDate(x.getDate() + dir);
-  else x.setDate(x.getDate() + dir * 7);
+  else x.setDate(x.getDate() + dir * 5);
+  if (x < today) return;
   set(x);
 }
 function rangeLabel(view: "day" | "week", d: Date) {
   if (view === "day") return d.toLocaleDateString("en-ZA", { weekday: "long", day: "numeric", month: "long" });
-  const s = startOfWeek(d); const e = new Date(s); e.setDate(s.getDate() + 6);
+  const s = new Date(d); const e = new Date(s); e.setDate(s.getDate() + 4);
   return `${s.toLocaleDateString("en-ZA", { day: "numeric", month: "short" })} – ${e.toLocaleDateString("en-ZA", { day: "numeric", month: "short" })}`;
 }
 function fmtTime(t: string) {
