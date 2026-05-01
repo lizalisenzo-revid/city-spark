@@ -172,7 +172,7 @@ function CalendarPage() {
                     </p>
                   </div>
                   <button
-                    onClick={() => { setDialogDate(key); setDialogOpen(true); }}
+                    onClick={() => { setEditingEvent(null); setDialogDate(key); setDialogOpen(true); }}
                     className="h-7 w-7 grid place-items-center border-2 border-ink rounded-full bg-paper hover:bg-lemon text-xs font-bold"
                     aria-label="Add event"
                   >+</button>
