@@ -230,18 +230,28 @@ export function MemoriesDialog({
 
         {/* Footer actions */}
         {memories.length > 0 && (
-          <div className="border-t-2 border-ink bg-cream p-4 grid grid-cols-2 gap-3">
+          <div className="border-t-2 border-ink bg-cream p-4 grid grid-cols-3 gap-2 sm:gap-3">
+            <button
+              onClick={handleSaveToScrapbook}
+              disabled={!previewUrl || busy}
+              className={cn(
+                "inline-flex items-center justify-center gap-2 px-3 py-3 font-bold border-2 border-ink rounded-full shadow-[3px_3px_0_0_var(--ink)] hover:translate-y-0.5 transition-transform text-sm disabled:opacity-50",
+                savedFlash ? "bg-mint" : "bg-coral text-paper"
+              )}
+            >
+              {savedFlash ? <><Check className="h-4 w-4" /> Saved</> : <><BookmarkPlus className="h-4 w-4" /> <span className="hidden sm:inline">Save to</span> scrapbook</>}
+            </button>
             <button
               onClick={handleDownload}
               disabled={!previewUrl || busy}
-              className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-paper font-bold border-2 border-ink rounded-full shadow-[3px_3px_0_0_var(--ink)] hover:translate-y-0.5 transition-transform text-sm disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 px-3 py-3 bg-paper font-bold border-2 border-ink rounded-full shadow-[3px_3px_0_0_var(--ink)] hover:translate-y-0.5 transition-transform text-sm disabled:opacity-50"
             >
               <Download className="h-4 w-4" /> Download
             </button>
             <button
               onClick={handleShare}
               disabled={!previewUrl || busy}
-              className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-magenta text-paper font-bold border-2 border-ink rounded-full shadow-[3px_3px_0_0_var(--ink)] hover:translate-y-0.5 transition-transform text-sm disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 px-3 py-3 bg-magenta text-paper font-bold border-2 border-ink rounded-full shadow-[3px_3px_0_0_var(--ink)] hover:translate-y-0.5 transition-transform text-sm disabled:opacity-50"
             >
               <Share2 className="h-4 w-4" /> Share
             </button>
