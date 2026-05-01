@@ -20,7 +20,7 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
-type View = "discover" | "plan" | "favs";
+type View = "discover" | "plan" | "favs" | "scrapbook";
 
 function HomePage() {
   const [city, setCity] = useState<City>("Centurion");
