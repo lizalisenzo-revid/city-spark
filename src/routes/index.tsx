@@ -32,7 +32,7 @@ function HomePage() {
   const filtered = useMemo(() => {
     return EVENTS.filter((e) => {
       if (e.city !== city) return false;
-      if (view !== "favs" && e.time !== time) return false;
+      if (view !== "favs" && time !== "all" && e.time !== time) return false;
       if (vibe !== "all" && !e.vibes.includes(vibe)) return false;
       if (cat !== "all" && e.category !== cat) return false;
       return true;
