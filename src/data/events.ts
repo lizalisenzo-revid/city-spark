@@ -10,6 +10,12 @@ import brunch from "@/assets/poster-brunch.jpg";
 import boardgames from "@/assets/poster-boardgames.jpg";
 import techno from "@/assets/poster-techno.jpg";
 import gallery from "@/assets/poster-gallery.jpg";
+import steakhouse from "@/assets/poster-steakhouse.jpg";
+import pizza from "@/assets/poster-pizza.jpg";
+import coffee from "@/assets/poster-coffee.jpg";
+import sushi from "@/assets/poster-sushi.jpg";
+import tacos from "@/assets/poster-tacos.jpg";
+import burger from "@/assets/poster-burger.jpg";
 
 export type City = "Centurion" | "Pretoria" | "Johannesburg";
 export type TimeOfDay = "day" | "night";
@@ -143,6 +149,77 @@ export const EVENTS: CityEvent[] = [
     price: "R90",
     vibes: ["solo", "friends", "visiting", "bored"],
     poster: cinema, accent: "sky", rotation: -1,
+  },
+  // ---------- Centurion restaurants (fixed schedules) ----------
+  {
+    id: "rest-cafe-mood",
+    title: "Mugg & Bean Centurion Mall — All-Day Coffee",
+    blurb: "Bottomless filter coffee, giant muffins and a window seat for people-watching. Open 7am–9pm daily.",
+    city: "Centurion", area: "Centurion Mall",
+    category: "eats", time: "day", startHour: 8, durationHours: 1,
+    price: "R60–R140",
+    vibes: ["solo", "friends", "visiting", "bored"],
+    poster: coffee, accent: "sky", rotation: -2,
+  },
+  {
+    id: "rest-spur-centurion",
+    title: "Hereford Steakhouse — Centurion",
+    blurb: "Classic flame-grilled steaks, ribs and bottomless salad. Lunch 12pm, dinner from 6pm, kitchen closes 10pm.",
+    city: "Centurion", area: "Heuwelsig Crossing",
+    category: "eats", time: "night", startHour: 18, durationHours: 2,
+    price: "R180–R320",
+    vibes: ["friends", "visiting", "bored"],
+    poster: steakhouse, accent: "tangerine", rotation: 1,
+  },
+  {
+    id: "rest-col-cavallo",
+    title: "Col'Cacchio — Centurion Lifestyle",
+    blurb: "Wood-fired thin-base pizza, big shareable salads and craft beer. Open 11:30am till late, 7 days.",
+    city: "Centurion", area: "Centurion Lifestyle Centre",
+    category: "eats", time: "day", startHour: 12, durationHours: 1,
+    price: "R120–R200",
+    vibes: ["friends", "visiting", "bored"],
+    poster: pizza, accent: "coral", rotation: -1,
+  },
+  {
+    id: "rest-ocean-basket",
+    title: "Ocean Basket — Forest Hill",
+    blurb: "Sushi platters, calamari and Greek salads in a casual Mediterranean setting. Daily 11am–10pm.",
+    city: "Centurion", area: "Forest Hill City",
+    category: "eats", time: "night", startHour: 19, durationHours: 2,
+    price: "R150–R280",
+    vibes: ["friends", "visiting", "solo"],
+    poster: sushi, accent: "mint", rotation: 2,
+  },
+  {
+    id: "rest-rocomamas",
+    title: "RocoMamas — Centurion Mall",
+    blurb: "Smashburgers, loaded chips and milkshakes you'll regret in the best way. Open 11am–10pm.",
+    city: "Centurion", area: "Centurion Mall",
+    category: "eats", time: "day", startHour: 13, durationHours: 1,
+    price: "R110–R190",
+    vibes: ["friends", "bored"],
+    poster: burger, accent: "lemon", rotation: -2,
+  },
+  {
+    id: "rest-pablos-tacos",
+    title: "Pablo's Mexican Cantina",
+    blurb: "Tacos al pastor, fresh margaritas and chilli-spiked nights. Tue–Sun, kitchen 12pm–10pm.",
+    city: "Centurion", area: "Eldoraigne",
+    category: "eats", time: "night", startHour: 19, durationHours: 2,
+    price: "R140–R230",
+    vibes: ["friends", "visiting", "bored"],
+    poster: tacos, accent: "magenta", rotation: 1,
+  },
+  {
+    id: "rest-tasha-irene",
+    title: "Tasha's Irene — Slow Brunch",
+    blurb: "Eggs benedict, açai bowls and serious flat whites in a leafy garden. Daily 7am–6pm.",
+    city: "Centurion", area: "Irene",
+    category: "eats", time: "day", startHour: 9, durationHours: 2,
+    price: "R130–R220",
+    vibes: ["solo", "friends", "visiting"],
+    poster: brunch, accent: "mint", rotation: -1,
   },
   {
     id: "techno-jhb",
