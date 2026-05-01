@@ -16,6 +16,7 @@ import coffee from "@/assets/poster-coffee.jpg";
 import sushi from "@/assets/poster-sushi.jpg";
 import tacos from "@/assets/poster-tacos.jpg";
 import burger from "@/assets/poster-burger.jpg";
+import trail from "@/assets/poster-trail.jpg";
 
 export type City = "Centurion" | "Pretoria" | "Johannesburg";
 export type TimeOfDay = "day" | "night";
@@ -230,6 +231,47 @@ export const EVENTS: CityEvent[] = [
     price: "R200",
     vibes: ["friends", "bored"],
     poster: techno, accent: "magenta", rotation: 2,
+  },
+  // ---- Real hiking trails around Centurion ----
+  {
+    id: "trail-hennops",
+    title: "Hennops Hiking Trail",
+    blurb: "Zebra Route or Krokodilberg — river crossings, koppies and wildlife. Bring water and proper shoes.",
+    city: "Centurion", area: "Hennops, Hartbeespoort road",
+    category: "outdoors", time: "day", startHour: 7, durationHours: 4,
+    price: "R110 pp",
+    vibes: ["solo", "friends", "visiting"],
+    poster: trail, accent: "mint", rotation: -1,
+  },
+  {
+    id: "trail-smuts",
+    title: "Smuts House Museum Trail",
+    blurb: "Moderate 5km loop in Irene with rolling grasslands and old farm history. A local favourite.",
+    city: "Centurion", area: "Irene",
+    category: "outdoors", time: "day", startHour: 8, durationHours: 2,
+    price: "R30 pp",
+    vibes: ["solo", "friends", "bored"],
+    poster: hike, accent: "lemon", rotation: 1,
+  },
+  {
+    id: "trail-zwartkop",
+    title: "Zwartkop Rondo",
+    blurb: "Moderate ridge walk with big views over Centurion. Best at sunrise or just before sunset.",
+    city: "Centurion", area: "Zwartkop",
+    category: "outdoors", time: "day", startHour: 16, durationHours: 2,
+    price: "Free",
+    vibes: ["solo", "friends"],
+    poster: trail, accent: "tangerine", rotation: 2,
+  },
+  {
+    id: "trail-koppie",
+    title: "Hennops Riverside Koppie",
+    blurb: "Short, scrambly koppie loop along the Hennops river. Great quick escape from the suburbs.",
+    city: "Centurion", area: "Magaliesberg edge",
+    category: "outdoors", time: "day", startHour: 9, durationHours: 2,
+    price: "R90 pp",
+    vibes: ["solo", "friends", "visiting", "bored"],
+    poster: trail, accent: "sky", rotation: -2,
   },
 ];
 
