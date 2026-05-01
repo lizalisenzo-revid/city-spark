@@ -164,20 +164,20 @@ function Header({ view, setView, favCount }: { view: View; setView: (v: View) =>
     { id: "scrapbook", label: "Scrapbook", icon: <BookOpen className="h-4 w-4" /> },
   ];
   return (
-    <header className="sticky top-0 z-40 border-b-2 border-ink bg-paper/90 backdrop-blur overflow-hidden">
+    <header className="sticky top-0 z-40 border-b-2 border-ink bg-paper/90 backdrop-blur">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
         <a href="/" className="flex items-center gap-2 font-display text-2xl tracking-tight shrink-0">
           <span className="inline-block h-7 w-7 bg-coral border-2 border-ink rounded-full" />
           <span className="hidden sm:inline">today<span className="text-coral">.</span></span>
         </a>
-        <nav className="flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar">
+        <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar flex-1 justify-end">
           {tabs.map((t) => (
             <button
               key={t.id}
               onClick={() => setView(t.id)}
               title={t.label}
               className={cn(
-                "inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm font-bold border-2 border-ink rounded-full transition-all duration-150 whitespace-nowrap shrink-0 will-change-transform",
+                "inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 text-sm font-bold border-2 border-ink rounded-full transition-all duration-150 whitespace-nowrap shrink-0",
                 view === t.id
                   ? "bg-ink text-paper shadow-[2px_2px_0_0_var(--coral)]"
                   : "bg-cream hover:bg-lemon hover:border-coral hover:shadow-[2px_2px_0_0_var(--coral)]"
@@ -190,7 +190,7 @@ function Header({ view, setView, favCount }: { view: View; setView: (v: View) =>
           <Link
             to={user ? "/calendar" : "/auth"}
             title={user ? "My Calendar" : "Sign in"}
-            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm font-bold border-2 border-ink rounded-full bg-coral text-paper shadow-[2px_2px_0_0_var(--ink)] hover:bg-coral/80 hover:shadow-[3px_3px_0_0_var(--ink)] transition-all duration-150 shrink-0"
+            className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 text-sm font-bold border-2 border-ink rounded-full bg-coral text-paper shadow-[2px_2px_0_0_var(--ink)] hover:bg-coral/80 hover:shadow-[3px_3px_0_0_var(--ink)] transition-all duration-150 shrink-0"
           >
             {user ? <UserIcon className="h-4 w-4" /> : <LogIn className="h-4 w-4" />}
             <span className="hidden md:inline">{user ? "My Calendar" : "Sign in"}</span>
