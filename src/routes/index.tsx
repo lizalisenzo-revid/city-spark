@@ -1,10 +1,11 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CITIES, CATEGORIES, VIBES, EVENTS, type City, type TimeOfDay, type Vibe, type Category, type CityEvent } from "@/data/events";
 import { PosterCard } from "@/components/PosterCard";
 import { ScrapbookView } from "@/components/ScrapbookView";
 import { useFavorites } from "@/hooks/useFavorites";
 import { readVibeRatings } from "@/hooks/useVibeRatings";
+import { createGroupPlan } from "@/lib/groupPlan";
 import { useAuth } from "@/hooks/useAuth";
 import { Sun, Moon, Sparkles, Heart, Calendar, ChevronDown, LogIn, User as UserIcon, BookOpen, Search, Shuffle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -45,6 +46,10 @@ function HomePage() {
   const [planSeed, setPlanSeed] = useState(() => Date.now());
   const [planCat, setPlanCat] = useState<Category | "all">("all");
   const fav = useFavorites();
+  const navigate = useNavigate();
+  const [groupModal, setGroupModal] = useState(false);
+  const [hostName, setHostName] = useState("");
+  const [creatingPlan, setCreatingPlan] = useState(false);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -88,6 +93,18 @@ function HomePage() {
     });
   }, [city, vibe, planCat, planSeed]);
 
+
+  const handleCreateGroupPlan = async () => {
+    if (!hostName.trim()) return;
+    setCreatingPlan(true);
+    try {
+      const plan = await createGroupPlan(city, hostName.trim());
+      await navigate({ to: "/group-plan/$planId", params: { planId: plan.id } });
+    } catch {
+      import("sonner").then(({ toast }) => toast.error("Couldn't create group plan. Check your connection."));
+    } finally { setCreatingPlan(false); }
+  };
+
   return (
     <div className="min-h-screen text-ink">
       <Header view={view} setView={setView} favCount={fav.ids.length} />
@@ -125,6 +142,7 @@ function HomePage() {
 
         {view === "plan" && (
           <DayPlan
+            onGroupPlan={() => setGroupModal(true)}
             plan={plan}
             city={city}
             vibe={vibe}
@@ -156,6 +174,30 @@ function HomePage() {
       </main>
 
       <Footer />
+    {/* Group plan modal */}
+      {groupModal && (
+        <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setGroupModal(false)}>
+          <div onClick={(e) => e.stopPropagation()} className="bg-paper border-2 border-ink rounded-2xl p-6 w-full max-w-sm shadow-[6px_6px_0_0_var(--coral)]">
+            <h2 className="font-display text-3xl mb-1">Plan with friends</h2>
+            <p className="text-sm text-ink/60 mb-4">Enter your name, then share the link with your crew. Everyone votes, the wheel decides.</p>
+            <input
+              autoFocus
+              value={hostName}
+              onChange={(e) => setHostName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleCreateGroupPlan()}
+              placeholder="Your name…"
+              className="w-full px-4 py-3 border-2 border-ink rounded-xl text-lg font-bold outline-none focus:border-coral bg-paper mb-3"
+            />
+            <button
+              onClick={handleCreateGroupPlan}
+              disabled={!hostName.trim() || creatingPlan}
+              className="w-full py-3 bg-coral text-paper font-bold text-lg border-2 border-ink rounded-full shadow-[3px_3px_0_0_var(--ink)] disabled:opacity-40"
+            >
+              {creatingPlan ? "Creating…" : "Create group plan 🎰"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -388,7 +430,7 @@ function CollageGrid({ events, fav }: { events: CityEvent[]; fav: ReturnType<typ
 
 /* ── Day Plan ── */
 function DayPlan({
-  plan, city, vibe, setVibe, planCat, setPlanCat, fav, onShuffle,
+  plan, city, vibe, setVibe, planCat, setPlanCat, fav, onShuffle, onGroupPlan,
 }: {
   plan: { label: string; range: [number, number]; ev?: CityEvent }[];
   city: City;
@@ -398,6 +440,7 @@ function DayPlan({
   setPlanCat: (c: Category | "all") => void;
   fav: ReturnType<typeof useFavorites>;
   onShuffle: () => void;
+  onGroupPlan: () => void;
 }) {
   return (
     <section className="mt-4">
@@ -408,6 +451,12 @@ function DayPlan({
           </h2>
           <p className="text-ink/70 mt-2">One pick per time slot, auto-planned for you.</p>
         </div>
+        <button
+          onClick={onGroupPlan}
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold border-2 border-ink rounded-full bg-lemon hover:bg-lemon/70 transition-colors shadow-[2px_2px_0_0_var(--ink)]"
+        >
+          👥 Plan with friends
+        </button>
         <button
           onClick={onShuffle}
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-lemon border-2 border-ink rounded-full font-bold text-sm shadow-[3px_3px_0_0_var(--ink)] hover:translate-y-0.5 transition-transform"

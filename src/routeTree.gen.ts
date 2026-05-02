@@ -13,7 +13,13 @@ import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MemoryMemoryIdRouteImport } from './routes/memory.$memoryId'
+import { Route as GroupPlanPlanIdRouteImport } from './routes/group-plan.$planId'
 
+const GroupPlanPlanIdRoute = GroupPlanPlanIdRouteImport.update({
+  id: '/group-plan/$planId',
+  path: '/group-plan/$planId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MemoryMemoryIdRoute = MemoryMemoryIdRouteImport.update({
   id: '/memory/$memoryId',
   path: '/memory/$memoryId',
@@ -40,12 +46,14 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
   '/memory/$memoryId': typeof MemoryMemoryIdRoute
+  '/group-plan/$planId': typeof GroupPlanPlanIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
   '/memory/$memoryId': typeof MemoryMemoryIdRoute
+  '/group-plan/$planId': typeof GroupPlanPlanIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,14 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
   '/memory/$memoryId': typeof MemoryMemoryIdRoute
+  '/group-plan/$planId': typeof GroupPlanPlanIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/calendar' | '/memory/$memoryId'
+  fullPaths: '/' | '/auth' | '/calendar' | '/memory/$memoryId' | '/group-plan/$planId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/calendar' | '/memory/$memoryId'
-  id: '__root__' | '/' | '/auth' | '/calendar' | '/memory/$memoryId'
+  to: '/' | '/auth' | '/calendar' | '/memory/$memoryId' | '/group-plan/$planId'
+  id: '__root__' | '/' | '/auth' | '/calendar' | '/memory/$memoryId' | '/group-plan/$planId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,10 +76,18 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CalendarRoute: typeof CalendarRoute
   MemoryMemoryIdRoute: typeof MemoryMemoryIdRoute
+  GroupPlanPlanIdRoute: typeof GroupPlanPlanIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/group-plan/$planId': {
+      id: '/group-plan/$planId'
+      path: '/group-plan/$planId'
+      fullPath: '/group-plan/$planId'
+      preLoaderRoute: typeof GroupPlanPlanIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/memory/$memoryId': {
       id: '/memory/$memoryId'
       path: '/memory/$memoryId'
@@ -107,6 +124,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CalendarRoute: CalendarRoute,
   MemoryMemoryIdRoute: MemoryMemoryIdRoute,
+  GroupPlanPlanIdRoute: GroupPlanPlanIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
