@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useScrapbook, type SavedCollage, type ScrapbookNote, type Memory } from "@/hooks/useMemories";
 import { EVENTS } from "@/data/events";
+import { useFavorites } from "@/hooks/useFavorites";
 import {
   Download, Share2, Trash2, X, BookOpen, Image as ImageIcon,
   PenLine, Plus, Check, ChevronDown, ChevronUp, MapPin, Camera, StickyNote
@@ -22,6 +23,15 @@ type PlaceGroup = {
   latestAt: number;
 };
 
+
+/* ── selectable place for note picker ── */
+type KnownPlace = {
+  eventId: string;
+  eventTitle: string;
+  eventArea: string;
+  thumb: string | null;
+};
+
 /* ── random tilt for polaroids ── */
 const tilts = [-3, -1.5, 0, 1.5, 3, -2, 2, -1, 1, -2.5];
 function tilt(i: number) { return `rotate(${tilts[i % tilts.length]}deg)`; }
@@ -31,6 +41,34 @@ function tilt(i: number) { return `rotate(${tilts[i % tilts.length]}deg)`; }
 ═══════════════════════════════════════════════ */
 export function ScrapbookView({ onBrowse }: { onBrowse: () => void }) {
   const { photos, collages, notes, removeCollage, saveNote, updateNote, deleteNote } = useScrapbook();
+  const { ids: favIds } = useFavorites();
+
+  /* All places user has interacted with: memories + favorites, deduplicated */
+  const knownPlaces = useMemo<KnownPlace[]>(() => {
+    const map = new Map<string, KnownPlace>();
+    // From existing memory place groups (built later, but we can recompute here inline)
+    for (const c of collages) {
+      if (!map.has(c.eventId)) map.set(c.eventId, { eventId: c.eventId, eventTitle: c.eventTitle, eventArea: c.eventArea, thumb: c.dataUrl });
+    }
+    for (const n of notes) {
+      if (!map.has(n.eventId)) map.set(n.eventId, { eventId: n.eventId, eventTitle: n.eventTitle, eventArea: n.eventArea, thumb: null });
+    }
+    for (const p of photos) {
+      if (!map.has(p.eventId)) {
+        const ev = EVENTS.find((e) => e.id === p.eventId);
+        if (ev) map.set(p.eventId, { eventId: p.eventId, eventTitle: ev.title, eventArea: ev.area, thumb: p.dataUrl });
+      }
+    }
+    // From favorites
+    for (const id of favIds) {
+      if (!map.has(id)) {
+        const ev = EVENTS.find((e) => e.id === id);
+        if (ev) map.set(id, { eventId: id, eventTitle: ev.title, eventArea: ev.area, thumb: null });
+      }
+    }
+    return Array.from(map.values());
+  }, [collages, notes, photos, favIds]);
+
   const [tab, setTab] = useState<Tab>("collages");
   const [zoom, setZoom] = useState<{ src: string; title?: string } | null>(null);
   const [addingNote, setAddingNote] = useState(false);
@@ -183,8 +221,10 @@ export function ScrapbookView({ onBrowse }: { onBrowse: () => void }) {
               )}
               {addingNote && (
                 <NoteComposer
+                  knownPlaces={knownPlaces}
                   onSave={(place, area, text) => {
-                    saveNote({ eventId: `manual-${Date.now()}`, eventTitle: place, eventArea: area, text });
+                    const ev = EVENTS.find((e) => e.title === place && e.area === area);
+                    saveNote({ eventId: ev?.id ?? `manual-${Date.now()}`, eventTitle: place, eventArea: area, text });
                     setAddingNote(false);
                   }}
                   onCancel={() => setAddingNote(false)}
@@ -398,41 +438,79 @@ function DiaryNote({ note, i }: { note: ScrapbookNote; i: number }) {
 /* ════════════════════════════════════════════════
    Note composer & card (all-memories section)
 ═══════════════════════════════════════════════ */
-function NoteComposer({ onSave, onCancel }: { onSave: (place: string, area: string, text: string) => void; onCancel: () => void }) {
-  const [place, setPlace] = useState("");
-  const [area, setArea] = useState("");
+function NoteComposer({ onSave, onCancel, knownPlaces }: {
+  onSave: (place: string, area: string, text: string) => void;
+  onCancel: () => void;
+  knownPlaces: KnownPlace[];
+}) {
+  const [selected, setSelected] = useState<KnownPlace | null>(null);
   const [text, setText] = useState("");
   const textRef = useRef<HTMLTextAreaElement>(null);
-  useEffect(() => { textRef.current?.focus(); }, []);
-  const canSave = place.trim().length > 0 && text.trim().length > 0;
+  useEffect(() => { if (selected) textRef.current?.focus(); }, [selected]);
+  const canSave = selected !== null && text.trim().length > 0;
 
   return (
     <div className="bg-lemon border-2 border-ink rounded-2xl p-5 shadow-[3px_3px_0_0_var(--coral)]">
-      <div className="flex gap-3 mb-3">
-        <input value={place} onChange={(e) => setPlace(e.target.value)}
-          placeholder="Place name (e.g. Irene Farm Market)"
-          className="flex-1 px-3 py-2 bg-paper border-2 border-ink rounded-lg text-sm font-bold placeholder:font-normal placeholder:text-ink/40 outline-none focus:border-coral"
-        />
-        <input value={area} onChange={(e) => setArea(e.target.value)}
-          placeholder="Area"
-          className="w-32 px-3 py-2 bg-paper border-2 border-ink rounded-lg text-sm placeholder:text-ink/40 outline-none focus:border-coral"
-        />
-      </div>
-      <textarea ref={textRef} value={text} onChange={(e) => setText(e.target.value)}
-        placeholder="Write about your experience — who you were with, what you ate, how it felt… ✍️"
-        rows={5}
-        className="w-full px-3 py-2.5 bg-paper border-2 border-ink rounded-lg text-sm placeholder:text-ink/40 outline-none focus:border-coral resize-none leading-relaxed"
-      />
-      <div className="flex justify-end gap-2 mt-3">
-        <button onClick={onCancel} className="px-4 py-2 text-sm font-bold border-2 border-ink rounded-full bg-cream hover:bg-ink/10 transition-colors">Cancel</button>
-        <button onClick={() => canSave && onSave(place.trim(), area.trim(), text.trim())} disabled={!canSave}
-          className={cn("inline-flex items-center gap-1.5 px-4 py-2 text-sm font-bold border-2 border-ink rounded-full transition-colors",
-            canSave ? "bg-coral text-paper hover:bg-coral/80" : "bg-ink/20 text-ink/40 cursor-not-allowed"
+      {!selected ? (
+        <>
+          <p className="font-bold text-sm mb-3">Which place are you writing about?</p>
+          {knownPlaces.length === 0 ? (
+            <p className="text-sm text-ink/60 mb-4">
+              Save some places from Discover first — they'll appear here.
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4 max-h-60 overflow-y-auto pr-1">
+              {knownPlaces.map((kp) => (
+                <button
+                  key={kp.eventId}
+                  onClick={() => setSelected(kp)}
+                  className="relative overflow-hidden rounded-xl border-2 border-ink bg-cream aspect-[4/3] flex flex-col justify-end hover:border-coral transition-colors group"
+                >
+                  {kp.thumb
+                    ? <img src={kp.thumb} alt={kp.eventTitle} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
+                    : <div className="absolute inset-0 bg-cream/60 flex items-center justify-center text-2xl">📍</div>
+                  }
+                  <div className="absolute inset-0 bg-gradient-to-t from-ink/70 to-transparent" />
+                  <div className="relative p-2 text-left">
+                    <p className="text-paper text-xs font-bold leading-tight truncate">{kp.eventTitle}</p>
+                    {kp.eventArea && <p className="text-paper/60 text-[10px] truncate">{kp.eventArea}</p>}
+                  </div>
+                </button>
+              ))}
+            </div>
           )}
-        >
-          <Check className="h-4 w-4" /> Save note
-        </button>
-      </div>
+          <div className="flex justify-end">
+            <button onClick={onCancel} className="px-4 py-2 text-sm font-bold border-2 border-ink rounded-full bg-cream hover:bg-ink/10 transition-colors">Cancel</button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="flex items-center gap-2 mb-3">
+            <button onClick={() => setSelected(null)} className="h-7 w-7 grid place-items-center bg-cream border-2 border-ink rounded-full shrink-0 hover:bg-ink/10">
+              <ChevronDown className="h-3.5 w-3.5 rotate-90" />
+            </button>
+            <div>
+              <p className="font-bold text-sm leading-tight">{selected.eventTitle}</p>
+              {selected.eventArea && <p className="text-xs text-ink/50">{selected.eventArea}</p>}
+            </div>
+          </div>
+          <textarea ref={textRef} value={text} onChange={(e) => setText(e.target.value)}
+            placeholder="Write about your experience — who you were with, what you ate, how it felt… ✍️"
+            rows={5}
+            className="w-full px-3 py-2.5 bg-paper border-2 border-ink rounded-lg text-sm placeholder:text-ink/40 outline-none focus:border-coral resize-none leading-relaxed"
+          />
+          <div className="flex justify-end gap-2 mt-3">
+            <button onClick={onCancel} className="px-4 py-2 text-sm font-bold border-2 border-ink rounded-full bg-cream hover:bg-ink/10 transition-colors">Cancel</button>
+            <button onClick={() => canSave && onSave(selected.eventTitle, selected.eventArea, text.trim())} disabled={!canSave}
+              className={cn("inline-flex items-center gap-1.5 px-4 py-2 text-sm font-bold border-2 border-ink rounded-full transition-colors",
+                canSave ? "bg-coral text-paper hover:bg-coral/80" : "bg-ink/20 text-ink/40 cursor-not-allowed"
+              )}
+            >
+              <Check className="h-4 w-4" /> Save note
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
