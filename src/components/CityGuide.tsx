@@ -4,6 +4,8 @@ import { type CityEvent } from "@/data/events";
 import { cn } from "@/lib/utils";
 
 const KEY_STORAGE = "today-openrouter-key";
+// Built-in key injected at build time via VITE_OPENROUTER_KEY env var
+const BUILT_IN_KEY: string = import.meta.env.VITE_OPENROUTER_KEY ?? "";
 
 interface Props {
   events: CityEvent[];
@@ -14,9 +16,11 @@ type Status = "idle" | "loading" | "speaking" | "error";
 
 export function CityGuide({ events, city }: Props) {
   const [open, setOpen] = useState(false);
-  const [apiKey, setApiKey] = useState(() =>
-    typeof window !== "undefined" ? localStorage.getItem(KEY_STORAGE) ?? "" : ""
-  );
+  // Use env-var key by default; allow override via localStorage (for future paywall logic)
+  const [apiKey, setApiKey] = useState(() => {
+    if (typeof window === "undefined") return BUILT_IN_KEY;
+    return localStorage.getItem(KEY_STORAGE) ?? BUILT_IN_KEY;
+  });
   const [keyInput, setKeyInput] = useState("");
   const [showKeyForm, setShowKeyForm] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
@@ -24,7 +28,8 @@ export function CityGuide({ events, city }: Props) {
   const [errorMsg, setErrorMsg] = useState("");
   const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  const hasKey = apiKey.trim().length > 0;
+  const hasKey = apiKey.trim().length > 0 || BUILT_IN_KEY.length > 0;
+  const effectiveKey = apiKey.trim() || BUILT_IN_KEY;
 
   // Stop speech on unmount
   useEffect(() => () => { speechSynthesis.cancel(); }, []);
@@ -85,7 +90,7 @@ Respond with only the spoken guide text, nothing else.`;
       const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${apiKey}`,
+          "Authorization": `Bearer ${effectiveKey}`,
           "Content-Type": "application/json",
           "HTTP-Referer": window.location.origin,
           "X-Title": "today. city guide",
@@ -135,10 +140,12 @@ Respond with only the spoken guide text, nothing else.`;
           <span className="font-bold text-paper text-sm">City Guide · {city}</span>
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={() => setShowKeyForm((v) => !v)} title="API key settings"
-            className="h-7 w-7 grid place-items-center rounded-full hover:bg-paper/20 transition-colors">
-            <KeyRound className="h-3.5 w-3.5 text-paper" />
-          </button>
+          {!BUILT_IN_KEY && (
+            <button onClick={() => setShowKeyForm((v) => !v)} title="API key settings"
+              className="h-7 w-7 grid place-items-center rounded-full hover:bg-paper/20 transition-colors">
+              <KeyRound className="h-3.5 w-3.5 text-paper" />
+            </button>
+          )}
           <button onClick={() => { setOpen(false); stopSpeaking(); }}
             className="h-7 w-7 grid place-items-center rounded-full hover:bg-paper/20 transition-colors">
             <X className="h-4 w-4 text-paper" />
@@ -147,7 +154,7 @@ Respond with only the spoken guide text, nothing else.`;
       </div>
 
       {/* Key form */}
-      {showKeyForm && (
+      {showKeyForm && !BUILT_IN_KEY && (
         <div className="px-4 py-3 border-b-2 border-ink/20 bg-lemon">
           <p className="text-xs font-bold mb-1">OpenRouter API key</p>
           <p className="text-[11px] text-ink/60 mb-2">
@@ -218,7 +225,7 @@ Respond with only the spoken guide text, nothing else.`;
           )}
         </div>
 
-        {!hasKey && (
+        {!hasKey && !BUILT_IN_KEY && (
           <p className="text-[11px] text-ink/50 text-center">
             Tap 🔑 above to add your free OpenRouter key
           </p>
