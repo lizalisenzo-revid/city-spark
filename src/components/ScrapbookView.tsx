@@ -1,44 +1,42 @@
-import { useState } from "react";
-import { useScrapbook, type SavedCollage } from "@/hooks/useMemories";
-import { Download, Share2, Trash2, X, BookOpen, Image as ImageIcon } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { useScrapbook, type SavedCollage, type ScrapbookNote } from "@/hooks/useMemories";
+import { Download, Share2, Trash2, X, BookOpen, Image as ImageIcon, PenLine, Plus, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Tab = "collages" | "photos";
+type Tab = "collages" | "photos" | "notes";
 
 export function ScrapbookView({ onBrowse }: { onBrowse: () => void }) {
-  const { photos, collages, removeCollage } = useScrapbook();
+  const { photos, collages, notes, removeCollage, saveNote, updateNote, deleteNote } = useScrapbook();
   const [tab, setTab] = useState<Tab>("collages");
   const [zoom, setZoom] = useState<{ src: string; title?: string } | null>(null);
+  const [addingNote, setAddingNote] = useState(false);
 
-  const isEmpty = photos.length === 0 && collages.length === 0;
+  const isEmpty = photos.length === 0 && collages.length === 0 && notes.length === 0;
+
+  const tabBtn = (id: Tab, label: string, icon: React.ReactNode, count: number) => (
+    <button
+      onClick={() => setTab(id)}
+      className={cn(
+        "inline-flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm transition-all",
+        tab === id ? "bg-coral text-paper border-2 border-ink" : "text-ink/60 hover:text-ink"
+      )}
+    >
+      {icon} {label} · {count}
+    </button>
+  );
 
   return (
     <section className="mt-8">
       <div className="flex flex-wrap items-end justify-between gap-4 mb-2">
         <div>
           <h2 className="font-display text-4xl">Your <span className="text-coral">scrapbook</span></h2>
-          <p className="text-ink/70 mt-1">Every photo and collage you've ever made — all in one place.</p>
+          <p className="text-ink/70 mt-1">Collages, photos, and your own stories — all in one place.</p>
         </div>
         {!isEmpty && (
           <div className="inline-flex items-center p-1 bg-cream border-2 border-ink rounded-full shadow-poster-sm">
-            <button
-              onClick={() => setTab("collages")}
-              className={cn(
-                "inline-flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm transition-all",
-                tab === "collages" ? "bg-coral text-paper border-2 border-ink" : "text-ink/60 hover:text-ink"
-              )}
-            >
-              <BookOpen className="h-4 w-4" /> Collages · {collages.length}
-            </button>
-            <button
-              onClick={() => setTab("photos")}
-              className={cn(
-                "inline-flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm transition-all",
-                tab === "photos" ? "bg-lemon border-2 border-ink" : "text-ink/60 hover:text-ink"
-              )}
-            >
-              <ImageIcon className="h-4 w-4" /> Photos · {photos.length}
-            </button>
+            {tabBtn("collages", "Collages", <BookOpen className="h-4 w-4" />, collages.length)}
+            {tabBtn("photos", "Photos", <ImageIcon className="h-4 w-4" />, photos.length)}
+            {tabBtn("notes", "Notes", <PenLine className="h-4 w-4" />, notes.length)}
           </div>
         )}
       </div>
@@ -48,7 +46,7 @@ export function ScrapbookView({ onBrowse }: { onBrowse: () => void }) {
           <div className="text-5xl mb-3">📓</div>
           <p className="font-display text-3xl">Your scrapbook is empty</p>
           <p className="text-ink/70 mt-2 max-w-md mx-auto">
-            Save a place, snap photos when you're there, and turn them into collages. They'll all live here as your personal scrapbook.
+            Save a place, snap photos when you're there, and write down your experiences. They'll all live here.
           </p>
           <button
             onClick={onBrowse}
@@ -67,24 +65,193 @@ export function ScrapbookView({ onBrowse }: { onBrowse: () => void }) {
             ))}
           </div>
         )
-      ) : photos.length === 0 ? (
-        <EmptyTab text="No photos yet. Tap a saved place and add some memories." />
+      ) : tab === "photos" ? (
+        photos.length === 0 ? (
+          <EmptyTab text="No photos yet. Tap a saved place and add some memories." />
+        ) : (
+          <div className="mt-6 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-3">
+            {photos.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setZoom({ src: p.dataUrl })}
+                className="relative aspect-square overflow-hidden border-2 border-ink rounded-lg shadow-poster-sm bg-cream group"
+              >
+                <img src={p.dataUrl} alt="" className="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform" />
+              </button>
+            ))}
+          </div>
+        )
       ) : (
-        <div className="mt-6 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-3">
-          {photos.map((p) => (
+        /* ── Notes tab ── */
+        <div className="mt-6 space-y-4">
+          {/* Add note button */}
+          {!addingNote && (
             <button
-              key={p.id}
-              onClick={() => setZoom({ src: p.dataUrl })}
-              className="relative aspect-square overflow-hidden border-2 border-ink rounded-lg shadow-poster-sm bg-cream group"
+              onClick={() => setAddingNote(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-ink text-paper font-bold border-2 border-ink rounded-full shadow-[2px_2px_0_0_var(--coral)] hover:bg-ink/80 transition-colors"
             >
-              <img src={p.dataUrl} alt="" className="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform" />
+              <Plus className="h-4 w-4" /> Write a note
             </button>
-          ))}
+          )}
+
+          {/* Inline note composer */}
+          {addingNote && (
+            <NoteComposer
+              onSave={(place, area, text) => {
+                saveNote({ eventId: `manual-${Date.now()}`, eventTitle: place, eventArea: area, text });
+                setAddingNote(false);
+              }}
+              onCancel={() => setAddingNote(false)}
+            />
+          )}
+
+          {notes.length === 0 && !addingNote ? (
+            <EmptyTab text='No notes yet. Hit "Write a note" to capture your first memory.' />
+          ) : (
+            notes.map((n) => (
+              <NoteCard key={n.id} note={n} onUpdate={(text) => updateNote(n.id, text)} onDelete={() => deleteNote(n.id)} />
+            ))
+          )}
         </div>
       )}
 
       {zoom && <Lightbox src={zoom.src} title={zoom.title} onClose={() => setZoom(null)} />}
     </section>
+  );
+}
+
+/* ── Note composer (new note form) ── */
+function NoteComposer({ onSave, onCancel }: { onSave: (place: string, area: string, text: string) => void; onCancel: () => void }) {
+  const [place, setPlace] = useState("");
+  const [area, setArea] = useState("");
+  const [text, setText] = useState("");
+  const textRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => { textRef.current?.focus(); }, []);
+
+  const canSave = place.trim().length > 0 && text.trim().length > 0;
+
+  return (
+    <div className="bg-lemon border-2 border-ink rounded-2xl p-5 shadow-[3px_3px_0_0_var(--coral)]">
+      <div className="flex gap-3 mb-3">
+        <input
+          value={place}
+          onChange={(e) => setPlace(e.target.value)}
+          placeholder="Place name (e.g. Irene Farm Market)"
+          className="flex-1 px-3 py-2 bg-paper border-2 border-ink rounded-lg text-sm font-bold placeholder:font-normal placeholder:text-ink/40 outline-none focus:border-coral"
+        />
+        <input
+          value={area}
+          onChange={(e) => setArea(e.target.value)}
+          placeholder="Area (e.g. Centurion)"
+          className="w-36 px-3 py-2 bg-paper border-2 border-ink rounded-lg text-sm placeholder:text-ink/40 outline-none focus:border-coral"
+        />
+      </div>
+      <textarea
+        ref={textRef}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Write about your experience — who you were with, what you ate, how it felt… ✍️"
+        rows={5}
+        className="w-full px-3 py-2.5 bg-paper border-2 border-ink rounded-lg text-sm placeholder:text-ink/40 outline-none focus:border-coral resize-none leading-relaxed"
+      />
+      <div className="flex justify-end gap-2 mt-3">
+        <button onClick={onCancel} className="px-4 py-2 text-sm font-bold border-2 border-ink rounded-full bg-cream hover:bg-ink/10 transition-colors">
+          Cancel
+        </button>
+        <button
+          onClick={() => canSave && onSave(place.trim(), area.trim(), text.trim())}
+          disabled={!canSave}
+          className={cn(
+            "inline-flex items-center gap-1.5 px-4 py-2 text-sm font-bold border-2 border-ink rounded-full transition-colors",
+            canSave ? "bg-coral text-paper hover:bg-coral/80" : "bg-ink/20 text-ink/40 cursor-not-allowed"
+          )}
+        >
+          <Check className="h-4 w-4" /> Save note
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Single note card (expandable + editable) ── */
+function NoteCard({ note, onUpdate, onDelete }: { note: ScrapbookNote; onUpdate: (text: string) => void; onDelete: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(note.text);
+  const [expanded, setExpanded] = useState(false);
+  const textRef = useRef<HTMLTextAreaElement>(null);
+
+  const date = new Date(note.updatedAt).toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" });
+  const isLong = note.text.length > 220;
+  const preview = isLong && !expanded ? note.text.slice(0, 220) + "…" : note.text;
+
+  useEffect(() => {
+    if (editing) textRef.current?.focus();
+  }, [editing]);
+
+  const save = () => {
+    if (draft.trim()) { onUpdate(draft.trim()); setEditing(false); }
+  };
+
+  return (
+    <div className="bg-paper border-2 border-ink rounded-2xl p-5 shadow-poster-sm group relative">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <p className="font-bold text-base leading-tight">{note.eventTitle}</p>
+          {note.eventArea && <p className="text-xs text-ink/50 mt-0.5">{note.eventArea} · {date}</p>}
+        </div>
+        <div className="flex gap-1 shrink-0">
+          {!editing && (
+            <button
+              onClick={() => { setDraft(note.text); setEditing(true); }}
+              className="h-8 w-8 grid place-items-center bg-cream border-2 border-ink rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+              aria-label="Edit"
+            >
+              <PenLine className="h-3.5 w-3.5" />
+            </button>
+          )}
+          <button
+            onClick={() => { if (confirm("Delete this note?")) onDelete(); }}
+            className="h-8 w-8 grid place-items-center bg-cream border-2 border-ink rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+            aria-label="Delete"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Body */}
+      {editing ? (
+        <>
+          <textarea
+            ref={textRef}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={6}
+            className="w-full px-3 py-2.5 bg-cream border-2 border-ink rounded-lg text-sm outline-none focus:border-coral resize-none leading-relaxed"
+          />
+          <div className="flex justify-end gap-2 mt-2">
+            <button onClick={() => setEditing(false)} className="px-3 py-1.5 text-sm font-bold border-2 border-ink rounded-full bg-cream hover:bg-ink/10">Cancel</button>
+            <button onClick={save} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-bold border-2 border-ink rounded-full bg-coral text-paper hover:bg-coral/80">
+              <Check className="h-3.5 w-3.5" /> Save
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="text-sm leading-relaxed text-ink/80 whitespace-pre-wrap">{preview}</p>
+          {isLong && (
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-coral hover:underline"
+            >
+              {expanded ? <><ChevronUp className="h-3 w-3" /> Show less</> : <><ChevronDown className="h-3 w-3" /> Read more</>}
+            </button>
+          )}
+        </>
+      )}
+    </div>
   );
 }
 
@@ -115,9 +282,7 @@ function CollageCard({ collage, onOpen, onDelete }: { collage: SavedCollage; onO
       const nav = navigator as Navigator & { canShare?: (data: { files: File[] }) => boolean };
       if (nav.canShare && nav.canShare({ files: [file] })) {
         await navigator.share({ files: [file], title: collage.eventTitle, text: `Memories from ${collage.eventTitle} 📸` });
-      } else {
-        handleDownload(e);
-      }
+      } else { handleDownload(e); }
     } catch { handleDownload(e); }
   };
 

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 
 const KEY = "today-memories-v1";
 const COLLAGE_KEY = "today-collages-v1";
+const NOTE_KEY = "today-notes-v1";
 
 export type Memory = {
   id: string;
@@ -17,6 +18,17 @@ export type SavedCollage = {
   dataUrl: string;
   layout: string;
   createdAt: number;
+};
+
+
+export type ScrapbookNote = {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  eventArea: string;
+  text: string;
+  createdAt: number;
+  updatedAt: number;
 };
 
 type Store = Record<string, Memory[]>;
@@ -47,6 +59,19 @@ function readCollages(): SavedCollage[] {
 
 function writeCollages(list: SavedCollage[]) {
   try { window.localStorage.setItem(COLLAGE_KEY, JSON.stringify(list)); } catch { /* quota */ }
+}
+
+
+function readNotes(): ScrapbookNote[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(NOTE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function writeNotes(list: ScrapbookNote[]) {
+  try { window.localStorage.setItem(NOTE_KEY, JSON.stringify(list)); } catch { /* quota */ }
 }
 
 export function useMemories(eventId: string) {
@@ -101,6 +126,7 @@ export function getMemoryCount(eventId: string): number {
 export function useScrapbook() {
   const [photos, setPhotos] = useState<(Memory & { eventId: string })[]>([]);
   const [collages, setCollages] = useState<SavedCollage[]>([]);
+  const [notes, setNotes] = useState<ScrapbookNote[]>([]);
 
   const refresh = useCallback(() => {
     const store = read();
@@ -111,9 +137,36 @@ export function useScrapbook() {
     flat.sort((a, b) => b.createdAt - a.createdAt);
     setPhotos(flat);
     setCollages(readCollages().sort((a, b) => b.createdAt - a.createdAt));
+    setNotes(readNotes().sort((a, b) => b.updatedAt - a.updatedAt));
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  const saveNote = useCallback((input: Omit<ScrapbookNote, "id" | "createdAt" | "updatedAt">) => {
+    const all = readNotes();
+    const entry: ScrapbookNote = {
+      ...input,
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    all.push(entry);
+    writeNotes(all);
+    setNotes(all.sort((a, b) => b.updatedAt - a.updatedAt));
+    return entry;
+  }, []);
+
+  const updateNote = useCallback((id: string, text: string) => {
+    const all = readNotes().map((n) => n.id === id ? { ...n, text, updatedAt: Date.now() } : n);
+    writeNotes(all);
+    setNotes(all.sort((a, b) => b.updatedAt - a.updatedAt));
+  }, []);
+
+  const deleteNote = useCallback((id: string) => {
+    const all = readNotes().filter((n) => n.id !== id);
+    writeNotes(all);
+    setNotes(all.sort((a, b) => b.updatedAt - a.updatedAt));
+  }, []);
 
   const removeCollage = useCallback((id: string) => {
     const next = readCollages().filter((c) => c.id !== id);
@@ -121,7 +174,7 @@ export function useScrapbook() {
     setCollages(next.sort((a, b) => b.createdAt - a.createdAt));
   }, []);
 
-  return { photos, collages, refresh, removeCollage };
+  return { photos, collages, notes, refresh, removeCollage, saveNote, updateNote, deleteNote };
 }
 
 export function saveCollage(input: Omit<SavedCollage, "id" | "createdAt">): SavedCollage {
