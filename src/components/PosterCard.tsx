@@ -2,6 +2,7 @@ import { CityEvent } from "@/data/events";
 import { Heart, MapPin, Clock, CalendarPlus, Navigation, Camera } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { useVibeRatings, VIBES } from "@/hooks/useVibeRatings";
 import { AddToCalendarDialog, buildPrefillFromEvent } from "@/components/AddToCalendarDialog";
 import { MemoriesDialog } from "@/components/MemoriesDialog";
 
@@ -31,6 +32,8 @@ function getMapsUrl(event: CityEvent): string {
 export function PosterCard({ event, favored, onToggleFav, size = "md", showMemories = false }: Props) {
   const [addOpen, setAddOpen] = useState(false);
   const [memOpen, setMemOpen] = useState(false);
+  const { getRating, rate } = useVibeRatings();
+  const currentVibe = getRating(event.id);
   const fmtTime = (h: number) => {
     const period = h >= 12 ? "pm" : "am";
     const hh = ((h + 11) % 12) + 1;
@@ -116,6 +119,32 @@ export function PosterCard({ event, favored, onToggleFav, size = "md", showMemor
             <Camera className="h-3.5 w-3.5" /> Memories & collage
           </button>
         )}
+
+        {/* Vibe rating */}
+        <div className="pt-2 border-t-2 border-ink/10">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-ink/40 mb-1.5">
+            {currentVibe ? "Your vibe" : "Rate the vibe"}
+          </p>
+          <div className="flex gap-1.5">
+            {VIBES.map((v) => (
+              <button
+                key={v.value}
+                title={v.label}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); rate(event.id, v.value); }}
+                className={cn(
+                  "flex-1 py-1.5 text-base border-2 rounded-lg transition-all duration-150",
+                  currentVibe === v.value
+                    ? "border-ink bg-ink/10 shadow-[1px_1px_0_0_var(--ink)] scale-105"
+                    : currentVibe
+                      ? "border-ink/20 opacity-40 hover:opacity-70"
+                      : "border-ink/20 hover:border-ink hover:bg-ink/5"
+                )}
+              >
+                {v.emoji}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </article>
     <AddToCalendarDialog

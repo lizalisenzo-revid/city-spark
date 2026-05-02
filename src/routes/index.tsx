@@ -4,6 +4,7 @@ import { CITIES, CATEGORIES, VIBES, EVENTS, type City, type TimeOfDay, type Vibe
 import { PosterCard } from "@/components/PosterCard";
 import { ScrapbookView } from "@/components/ScrapbookView";
 import { useFavorites } from "@/hooks/useFavorites";
+import { readVibeRatings } from "@/hooks/useVibeRatings";
 import { useAuth } from "@/hooks/useAuth";
 import { Sun, Moon, Sparkles, Heart, Calendar, ChevronDown, LogIn, User as UserIcon, BookOpen, Search, Shuffle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -60,12 +61,17 @@ function HomePage() {
   const favEvents = useMemo(() => EVENTS.filter((e) => fav.has(e.id)), [fav]);
 
   const plan = useMemo(() => {
+    const vibeRatings = readVibeRatings();
     const pool = EVENTS.filter((e) =>
       e.city === city &&
       (vibe === "all" || e.vibes.includes(vibe)) &&
-      (planCat === "all" || e.category === planCat)
+      (planCat === "all" || e.category === planCat) &&
+      vibeRatings[e.id] !== "dead"   // hide skull-rated places from plan
     );
-    const shuffled = shuffle(pool, planSeed);
+    // Boost 🔥 rated events to front before shuffling
+    const fire = pool.filter((e) => vibeRatings[e.id] === "fire");
+    const rest = pool.filter((e) => vibeRatings[e.id] !== "fire");
+    const shuffled = [...fire, ...shuffle(rest, planSeed)];
     const slots: { label: string; range: [number, number]; ev?: CityEvent }[] = [
       { label: "Morning", range: [6, 11] },
       { label: "Midday", range: [11, 14] },

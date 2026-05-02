@@ -3,6 +3,7 @@ import { useScrapbook, type SavedCollage, type ScrapbookNote, type Memory } from
 import { EVENTS } from "@/data/events";
 import { createSharedMemory } from "@/lib/sharedMemory";
 import { useFavorites } from "@/hooks/useFavorites";
+import { useVibeRatings, VIBES } from "@/hooks/useVibeRatings";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Download, Share2, Trash2, X, BookOpen, Image as ImageIcon,
@@ -46,6 +47,7 @@ function tilt(i: number) { return `rotate(${tilts[i % tilts.length]}deg)`; }
 export function ScrapbookView({ onBrowse }: { onBrowse: () => void }) {
   const { photos, collages, notes, removeCollage, saveNote, updateNote, deleteNote } = useScrapbook();
   const { user } = useAuth();
+  const { getRating } = useVibeRatings();
   const navigate = useNavigate();
   const { ids: favIds } = useFavorites();
   const [sharingPlace, setSharingPlace] = useState<string | null>(null);
@@ -193,7 +195,7 @@ export function ScrapbookView({ onBrowse }: { onBrowse: () => void }) {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {places.map((place) => (
-              <PlaceCard key={place.eventId} place={place} onClick={() => setDiaryPlace(place)} onShare={() => handleShare(place)} sharing={sharingPlace === place.eventId} />
+              <PlaceCard key={place.eventId} place={place} onClick={() => setDiaryPlace(place)} onShare={() => handleShare(place)} sharing={sharingPlace === place.eventId} vibe={getRating(place.eventId)} />
             ))}
           </div>
         )}
@@ -274,7 +276,7 @@ export function ScrapbookView({ onBrowse }: { onBrowse: () => void }) {
 /* ════════════════════════════════════════════════
    Place card
 ═══════════════════════════════════════════════ */
-function PlaceCard({ place, onClick, onShare, sharing }: { place: PlaceGroup; onClick: () => void; onShare: () => void; sharing?: boolean }) {
+function PlaceCard({ place, onClick, onShare, sharing, vibe }: { place: PlaceGroup; onClick: () => void; onShare: () => void; sharing?: boolean; vibe?: string | null }) {
   const bg = place.thumb ?? place.poster;
   const total = place.photos.length + place.collages.length + place.notes.length;
 
@@ -295,6 +297,12 @@ function PlaceCard({ place, onClick, onShare, sharing }: { place: PlaceGroup; on
         {place.eventArea && (
           <p className="text-paper/70 text-xs flex items-center gap-0.5 mt-0.5">
             <MapPin className="h-3 w-3" />{place.eventArea}
+          </p>
+        )}
+        {vibe && (
+          <p className="text-xs mt-1">
+            {VIBES.find((v) => v.value === vibe)?.emoji}{" "}
+            <span className="text-paper/60">{VIBES.find((v) => v.value === vibe)?.label}</span>
           </p>
         )}
         <div className="flex items-center gap-2 mt-2">
