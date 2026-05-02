@@ -1,12 +1,16 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useScrapbook, type SavedCollage, type ScrapbookNote, type Memory } from "@/hooks/useMemories";
 import { EVENTS } from "@/data/events";
+import { createSharedMemory } from "@/lib/sharedMemory";
 import { useFavorites } from "@/hooks/useFavorites";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Download, Share2, Trash2, X, BookOpen, Image as ImageIcon,
-  PenLine, Plus, Check, ChevronDown, ChevronUp, MapPin, Camera, StickyNote
+  PenLine, Plus, Check, ChevronDown, ChevronUp, MapPin, Camera, StickyNote, Users
 } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 type Tab = "collages" | "photos" | "notes";
 
@@ -41,7 +45,10 @@ function tilt(i: number) { return `rotate(${tilts[i % tilts.length]}deg)`; }
 ═══════════════════════════════════════════════ */
 export function ScrapbookView({ onBrowse }: { onBrowse: () => void }) {
   const { photos, collages, notes, removeCollage, saveNote, updateNote, deleteNote } = useScrapbook();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const { ids: favIds } = useFavorites();
+  const [sharingPlace, setSharingPlace] = useState<string | null>(null);
 
   /* All places user has interacted with: memories + favorites, deduplicated */
   const knownPlaces = useMemo<KnownPlace[]>(() => {
@@ -122,6 +129,23 @@ export function ScrapbookView({ onBrowse }: { onBrowse: () => void }) {
     return Array.from(map.values()).sort((a, b) => b.latestAt - a.latestAt);
   }, [photos, collages, notes]);
 
+  const handleShare = async (place: PlaceGroup) => {
+    if (!user) { navigate({ to: "/auth" }); return; }
+    setSharingPlace(place.eventId);
+    try {
+      const mem = await createSharedMemory(place.eventId, place.eventTitle, place.eventArea, user.id);
+      const url = `${window.location.origin}/memory/${mem.id}`;
+      if (navigator.share) {
+        await navigator.share({ title: `Memories at ${place.eventTitle}`, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Link copied! Share it with your friends 🎉");
+      }
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name !== "AbortError") toast.error("Couldn't create share link.");
+    } finally { setSharingPlace(null); }
+  };
+
   const tabBtn = (id: Tab, label: string, icon: React.ReactNode, count: number) => (
     <button
       onClick={() => setTab(id)}
@@ -169,7 +193,7 @@ export function ScrapbookView({ onBrowse }: { onBrowse: () => void }) {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {places.map((place) => (
-              <PlaceCard key={place.eventId} place={place} onClick={() => setDiaryPlace(place)} />
+              <PlaceCard key={place.eventId} place={place} onClick={() => setDiaryPlace(place)} onShare={() => handleShare(place)} sharing={sharingPlace === place.eventId} />
             ))}
           </div>
         )}
@@ -250,7 +274,7 @@ export function ScrapbookView({ onBrowse }: { onBrowse: () => void }) {
 /* ════════════════════════════════════════════════
    Place card
 ═══════════════════════════════════════════════ */
-function PlaceCard({ place, onClick }: { place: PlaceGroup; onClick: () => void }) {
+function PlaceCard({ place, onClick, onShare, sharing }: { place: PlaceGroup; onClick: () => void; onShare: () => void; sharing?: boolean }) {
   const bg = place.thumb ?? place.poster;
   const total = place.photos.length + place.collages.length + place.notes.length;
 
@@ -292,6 +316,16 @@ function PlaceCard({ place, onClick }: { place: PlaceGroup; onClick: () => void 
         </div>
       </div>
 
+      {/* Share button */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onShare(); }}
+        disabled={sharing}
+        className="absolute top-2 right-2 h-8 w-8 grid place-items-center bg-paper/80 backdrop-blur-sm border-2 border-ink rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-paper z-10"
+        aria-label="Share memory"
+        title="Share this memory with friends"
+      >
+        {sharing ? <span className="text-xs animate-spin">⏳</span> : <Share2 className="h-3.5 w-3.5" />}
+      </button>
       {/* Hover cue */}
       <div className="absolute inset-0 border-4 border-coral rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
     </button>

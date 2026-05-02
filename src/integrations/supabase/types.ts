@@ -221,3 +221,23 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
+// ── Shared memory tables (manually added) ──
+export type SharedMemoryRow = {
+  id: string;
+  place_id: string;
+  place_title: string;
+  place_area: string;
+  created_by: string;
+  created_at: string;
+};
+
+export type SharedMemoryItemRow = {
+  id: string;
+  memory_id: string;
+  user_id: string;
+  display_name: string | null;
+  type: "photo" | "note";
+  content: string;
+  created_at: string;
+};

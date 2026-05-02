@@ -12,7 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MemoryMemoryIdRouteImport } from './routes/memory.$memoryId'
 
+const MemoryMemoryIdRoute = MemoryMemoryIdRouteImport.update({
+  id: '/memory/$memoryId',
+  path: '/memory/$memoryId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CalendarRoute = CalendarRouteImport.update({
   id: '/calendar',
   path: '/calendar',
@@ -33,34 +39,45 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
+  '/memory/$memoryId': typeof MemoryMemoryIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
+  '/memory/$memoryId': typeof MemoryMemoryIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
+  '/memory/$memoryId': typeof MemoryMemoryIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/calendar'
+  fullPaths: '/' | '/auth' | '/calendar' | '/memory/$memoryId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/calendar'
-  id: '__root__' | '/' | '/auth' | '/calendar'
+  to: '/' | '/auth' | '/calendar' | '/memory/$memoryId'
+  id: '__root__' | '/' | '/auth' | '/calendar' | '/memory/$memoryId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   CalendarRoute: typeof CalendarRoute
+  MemoryMemoryIdRoute: typeof MemoryMemoryIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/memory/$memoryId': {
+      id: '/memory/$memoryId'
+      path: '/memory/$memoryId'
+      fullPath: '/memory/$memoryId'
+      preLoaderRoute: typeof MemoryMemoryIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/calendar': {
       id: '/calendar'
       path: '/calendar'
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   CalendarRoute: CalendarRoute,
+  MemoryMemoryIdRoute: MemoryMemoryIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
