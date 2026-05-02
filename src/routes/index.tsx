@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CITIES, CATEGORIES, VIBES, EVENTS, type City, type TimeOfDay, type Vibe, type Category, type CityEvent } from "@/data/events";
 import { PosterCard } from "@/components/PosterCard";
 import { ScrapbookView } from "@/components/ScrapbookView";
+import { CityGuide } from "@/components/CityGuide";
 import { useFavorites } from "@/hooks/useFavorites";
 import { readVibeRatings } from "@/hooks/useVibeRatings";
 import { createGroupPlan } from "@/lib/groupPlan";
@@ -172,6 +173,9 @@ function HomePage() {
 
         {view === "scrapbook" && <ScrapbookView onBrowse={() => setView("discover")} />}
       </main>
+
+      {/* AI City Guide — only in discover view */}
+      {view === "discover" && <CityGuide events={filtered.length > 0 ? filtered : EVENTS.filter((e) => e.city === city)} city={city} />}
 
       <Footer />
     {/* Group plan modal */}
